@@ -1,11 +1,17 @@
-FROM python:3.10.12
+FROM python:3.10.12-slim AS builder
 
-WORKDIR /fastapi-app
+WORKDIR /src
+
+COPY pyproject.toml poetry.lock ./
+
+RUN apt-get update &&  \
+    apt-get install -y --no-install-recommends gcc && \
+    pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-root --only main
 
 COPY . .
 
-RUN pip install -r requirements.txt
+EXPOSE 80
 
-COPY ./app ./app
-
-CMD ["python", "./app/main.py"]
+CMD ["python", "/src/app/main.py"]
