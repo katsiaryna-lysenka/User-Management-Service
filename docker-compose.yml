@@ -7,14 +7,9 @@ services:
       dockerfile: Dockerfile
     container_name: user-management-container
     ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://katsiaryna:123456789@8000:5432/db_base  # Переменные окружения для подключения к базе данных
-      - REDIS_URL=redis://8001:6379
-      # Другие переменные окружения, необходимые для вашего сервиса
+      - "5000:5000"
     depends_on:
       - postgresql  # Зависимость от контейнера с PostgreSQL
-      - redis  # Зависимость от контейнера с Redis
 
   postgresql:
     image: postgres:latest
@@ -23,20 +18,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=123456789
-      - POSTGRES_DB=db_name
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=postgres
 
-  redis:
-    image: redis:latest
-    restart: always
-    container_name: redis-container
-    ports:
-      - "6379:6379"
 
-#volumes:
-#  pgdata:  # Определение тома для данных PostgreSQL
-#
-#networks:
-#  custom:
-#    driver: bridge
+

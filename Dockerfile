@@ -1,8 +1,8 @@
 FROM python:3.10.12-slim AS builder
 
-WORKDIR /src
-
 COPY pyproject.toml poetry.lock ./
+
+WORKDIR /app
 
 RUN apt-get update &&  \
     apt-get install -y --no-install-recommends gcc && \
@@ -10,8 +10,8 @@ RUN apt-get update &&  \
     poetry config virtualenvs.create false && \
     poetry install --no-root --only main
 
-COPY . .
+COPY . /app
 
-EXPOSE 80
+EXPOSE 5000
 
-CMD ["python", "/src/app/main.py"]
+CMD ["python3", "main.py"]
