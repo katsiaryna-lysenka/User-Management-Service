@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, DateTime, func, UUID, String
+from sqlalchemy import Column, Integer, DateTime, func, UUID, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
@@ -18,4 +18,7 @@ class Group(Base):
         DateTime,
         nullable=False,
         server_default=func.current_timestamp(),
+    )
+    user_id: Mapped[Integer] = mapped_column(
+        ForeignKey("users.id"),
     )
