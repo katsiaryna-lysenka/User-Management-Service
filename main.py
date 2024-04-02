@@ -5,18 +5,10 @@ from pydantic import BaseModel, EmailStr
 from items_views import router as items_router
 import uvicorn
 from users.views import router as users_router
-from core.models import Base, db_helper
+from core.models import Base, db_helper, Group, User, Role, DatabaseHelper
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with db_helper.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 # app.include_router(router=router_v1, prefix=settings.api_v1_prefix)
 app.include_router(items_router)
 app.include_router(users_router)

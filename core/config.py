@@ -1,10 +1,9 @@
+import os
 from os import getenv
+from typing import Optional, Dict, Any
 
 from pydantic_settings import BaseSettings
 from sqlalchemy.sql.functions import user
-
-
-database_postgresql = "database_postgresql"
 
 
 class Settings(BaseSettings):
