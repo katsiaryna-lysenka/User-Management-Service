@@ -11,7 +11,7 @@ from core.config import settings
 def encode_jwt(
     payload: dict,
     private_key: str = settings.auth_jwt.private_key_path.read_text(),
-    algorithm: str = settings.auth_jwt.algorithm,
+    algorithms: str = settings.auth_jwt.algorithms,
     expire_minutes: int = settings.auth_jwt.access_token_expire_minutes,
     expire_timedelta: timedelta | None = None,
 ):
@@ -29,7 +29,7 @@ def encode_jwt(
     encoded = jwt.encode(
         to_encoded,
         private_key,
-        algorithm=algorithm,
+        algorithms=algorithms,
     )
 
     return encoded
@@ -38,12 +38,12 @@ def encode_jwt(
 def decode_jwt(
     token: str | bytes,
     private_key: str = settings.auth_jwt.public_key_path.read_text(),
-    algorithm: str = settings.auth_jwt.algorithm,
+    algorithms: str = settings.auth_jwt.algorithms,
 ):
     decoded = jwt.decode(
         token,
         private_key,
-        algorithm=[algorithm],
+        algorithms=[algorithms],
     )
 
     return decoded
