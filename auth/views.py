@@ -8,7 +8,10 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy import func
 from sqlalchemy.orm import Session, sessionmaker
 
-from users.views import UserCreate, User
+from users.schemas import CreateUser
+from users.views import UserCreate, UserBase
+from core.models.user import User
+from users.crud import create_user
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -135,3 +138,9 @@ def auth_logout_cookie(
     return {
         "message": f"Bye, {username}!",
     }
+
+
+@router.post("/signup/")
+def sign_up(user_data: CreateUser):
+    db_user = create_user(user_data)
+    return user_data

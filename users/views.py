@@ -1,28 +1,34 @@
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Form
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from auth.views import get_username_by_static_auth_token, get_auth_user_username
-from core.models import User
 from users import crud
 from users.schemas import CreateUser, UserSchema
+from core.models.role import State
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 class UserBase(BaseModel):
+    id: str
     name: str
     surname: str
     username: str
     phone_number: str
-    email: str
-    role: str
+    email: EmailStr
+    role: State
     group: str
-    image_s3_path: Optional[str]
     is_blocked: bool
+    created_at: Optional[datetime] = None
+    modified_at: Optional[datetime] = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.id = str(uuid4())
 
 
 class UserCreate(UserBase):
