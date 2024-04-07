@@ -1,146 +1,84 @@
-import secrets
-import uuid
-from typing import Annotated, Any
-from time import time
+from datetime import datetime
+from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Response, Cookie
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from sqlalchemy import func
-from sqlalchemy.orm import Session, sessionmaker
+from fastapi import APIRouter, status, HTTPException, Depends
 
-from users.schemas import CreateUser
-from users.views import UserCreate, UserBase
-from core.models.user import User
-from users.crud import create_user
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from auth.utils import encode_jwt
+from core.config import engine
+from core.models import User
+from users.crud import CRUD
+from users.schemas import CreateUser, LoginInput
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-security = HTTPBasic()
-
-
-usernames_to_passwords = {"admin": "admin", "john": "password"}
-
-static_auth_token_to_username = {
-    "064546d82e03a7c560ab20a8cc10a4aa": "admin",
-    "6ff74bd36fc08273572dcc1afba77f42": "john",
-}
+session = async_sessionmaker(bind=engine, expire_on_commit=False)
+db = CRUD()
 
 
-def get_auth_user_username(
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
-) -> str:
-    unauthed_exc = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid username or password",
-        headers={"WWW-Authonticate": "Basic"},
-    )
-    correct_password = usernames_to_passwords.get(credentials.username)
-    if correct_password is None:
-        raise unauthed_exc
+@router.post("/signup", status_code=HTTPStatus.CREATED, response_model=dict)
+async def create_user(user_data: CreateUser) -> dict:
 
-    # secrets
-    if not secrets.compare_digest(
-        credentials.password.encode("utf-8"),
-        correct_password.encode("utf-8"),
-    ):
-        raise unauthed_exc
+    # устанавливаю значения по умолчанию для created_at и modified_at
+    user_data.created_at = datetime.now()
+    user_data.modified_at = datetime.now()
 
-    return credentials.username
-
-
-def get_username_by_static_auth_token(
-    static_token: str = Header(alias="x-auth-token"),
-) -> str:
-    if username := static_auth_token_to_username.get(static_token):
-        return username
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="token invalid",
+    new_user = User(
+        id=user_data.id,
+        name=user_data.name,
+        surname=user_data.surname,
+        username=user_data.username,
+        password=user_data.password,
+        phone_number=user_data.phone_number,
+        email=user_data.email,
+        role=user_data.role,
+        group=user_data.group,
+        is_blocked=user_data.is_blocked,
+        created_at=user_data.created_at,
+        modified_at=user_data.modified_at
     )
 
+    user = await db.add(session, new_user)
 
-@router.get("/basic-auth-username/")
-def basic_auth_username(
-    auth_username: str = Depends(get_auth_user_username),
-):
+    # преобразую объект User в словарь, выбирая только нужные атрибуты
+    user_dict = {
+        "id": user.id,
+        "name": user.name,
+        "surname": user.surname,
+        "username": user.username,
+        "phone_number": user.phone_number,
+        "email": user.email,
+        "role": user.role,
+        "group": user.group,
+        "is_blocked": user.is_blocked,
+        "created_at": user.created_at,
+        "modified_at": user.modified_at
+    }
+
+    return user_dict
+
+
+@router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
+async def return_tokens(user_data: LoginInput) -> dict:
+    # аутентифицирую пользователя
+    try:
+        user = await db.get_by_login(session, user_data.username)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    # проверка пароль
+    if user.password != user_data.password:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    # создаю токены доступа и обновления
+    access_token = encode_jwt({"user_id": str(user.id)})
+    refresh_token = encode_jwt(
+        {"user_id": str(user.id)},
+        expire_minutes=60,  # Токен обновления сроком на 1 час
+    )
+
+    # возвращаю токены в формате словаря
     return {
-        "message": f"Hi, {auth_username}!",
-        "username": auth_username,
+        "access_token": access_token,
+        "refresh_token": refresh_token
     }
-
-
-@router.get("/some-http-header-auth/")
-def auth_some_http_header(
-    username: str = Depends(get_username_by_static_auth_token),
-):
-    return {
-        "message": f"Hi, {username}!",
-        "username": username,
-    }
-
-
-COOKIES: dict[str, dict[str, Any]] = {}
-COOKIE_SESSION_ID_KEY = "web-app-session-id"
-
-
-def generate_session_id() -> str:
-    return uuid.uuid4().hex
-
-
-def get_session_data(
-    session_id: str = Cookie(alias=COOKIE_SESSION_ID_KEY),
-) -> dict:
-    if session_id not in COOKIES:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="not authenticated",
-        )
-
-    return COOKIES[session_id]
-
-
-@router.post("/login-cookie/")
-def auth_login_set_cookie(
-    response: Response,
-    username: str = Depends(get_username_by_static_auth_token),
-):
-    session_id = generate_session_id()
-    COOKIES[session_id] = {
-        "username": username,
-        "login_at": int(time()),
-    }
-    response.set_cookie(COOKIE_SESSION_ID_KEY, session_id)
-    return {"result": "ok"}
-
-
-@router.get("/check-cookie/")
-def auth_check_cookie(
-    user_session_data: dict = Depends(get_session_data),
-):
-    username = user_session_data["username"]
-    return {
-        "message": f"Hello, {username}!",
-        **user_session_data,
-    }
-
-
-@router.get("/logout-cookie/")
-def auth_logout_cookie(
-    response: Response,
-    session_id: str = Cookie(alias=COOKIE_SESSION_ID_KEY),
-    user_session_data: dict = Depends(get_session_data),
-):
-    COOKIES.pop(session_id)
-    response.delete_cookie(COOKIE_SESSION_ID_KEY)
-    username = user_session_data["username"]
-    return {
-        "message": f"Bye, {username}!",
-    }
-
-
-@router.post("/signup/")
-def sign_up(user_data: CreateUser):
-    db_user = create_user(user_data)
-    return user_data

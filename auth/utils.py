@@ -26,7 +26,7 @@ def encode_jwt(
     encoded = jwt.encode(
         to_encoded,
         private_key,
-        algorithms=algorithms,
+        algorithm=algorithms,
     )
 
     return encoded
@@ -34,12 +34,12 @@ def encode_jwt(
 
 def decode_jwt(
     token: str | bytes,
-    private_key: str = settings.auth_jwt.public_key_path.read_text(),
+    public_key: str = settings.auth_jwt.public_key_path.read_text(),
     algorithms: str = settings.auth_jwt.algorithms,
 ):
     decoded = jwt.decode(
         token,
-        private_key,
+        public_key,
         algorithms=[algorithms],
     )
 
