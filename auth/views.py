@@ -71,7 +71,7 @@ crud = CRUD()
 async def return_tokens(credentials: HTTPBasicCredentials = Depends(security)) -> dict:
     try:
         # аутентификация пользователя
-        user = await crud.authenticate_user(credentials.username, credentials.password)
+        user = await crud.authenticate_user(session, credentials.username, credentials.password)
 
         # создаю токены доступа и обновления
         access_token = encode_jwt({"user_id": str(user.id)})
@@ -88,24 +88,26 @@ async def return_tokens(credentials: HTTPBasicCredentials = Depends(security)) -
 
 async def get_access_token(username: str, password: str) -> bytes:
     try:
-        # Получаем словарь с токенами доступа от функции return_tokens
+
+        # получаю словарь с токенами доступа от функции return_tokens
         tokens = await return_tokens(
             HTTPBasicCredentials(username=username, password=password)
         )
 
-        # Извлекаем токен доступа из словаря
+        # извлекаю токен доступа из словаря
         access_token = tokens.get("access_token")
 
-        # Если токен доступа не был получен, возникает ошибка
+        # если токен доступа не был получен, возникает ошибка
         if not access_token:
             raise HTTPException(
                 status_code=500, detail="Failed to generate access token"
             )
 
-        # Преобразуем токен доступа в байтовый формат
+        # преобразую токен доступа в байтовый формат
         access_token_bytes = access_token.encode()
 
         return access_token_bytes
     except HTTPException as e:
-        # Если возникла ошибка при получении токена доступа, пробрасываем ее дальше
+
+        # если возникла ошибка при получении токена доступа, пробрасываю ее дальше
         raise e

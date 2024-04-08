@@ -39,47 +39,28 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 security = HTTPBasic()
 
 
-# @router.get("/me/", response_model=UserInfo)
-# async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> UserInfo:
-#     try:
-#         # аутентификация пользователя
-#         user = await authenticate_user(credentials.username, credentials.password)
-#
-#         # получаем информацию о пользователе по его ID
-#         user_info = await db.get_user_info_by_id(session, str(user.id))
-#
-#         # преобразуем UUID в строку для поля id
-#         user_info["id"] = str(user_info["id"])
-#
-#         # создаем экземпляр класса UserInfo с полученной информацией о пользователе
-#         user_info_instance = UserInfo(**user_info)
-#
-#         return user_info_instance
-#     except (ValueError, HTTPException) as e:
-#         raise HTTPException(status_code=401, detail=str(e))
-
-
 @router.get("/me/", response_model=UserInfo)
 async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> UserInfo:
     try:
-        # Проверяем, были ли предоставлены учетные данные
+        # проверяю, были ли предоставлены учетные данные
         if not (credentials.username and credentials.password):
             raise ValueError("Invalid credentials")
 
-        # Получаем токен доступа из учетных данных пользователя
-        access_token = get_access_token(credentials.username, credentials.password)
+        # получаю токен доступа из учетных данных пользователя
+        access_token = await get_access_token(credentials.username, credentials.password)
 
-        # Извлекаем user_id из токена
-        decoded_token = decode_jwt(access_token)
+        # извлекаю user_id из токена
+        decoded_token = await decode_jwt(access_token)
+
         user_id = str(decoded_token.get("user_id"))
 
-        # Получаем информацию о пользователе по его ID
+        # получаю информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id)
 
-        # Преобразуем UUID в строку для поля id
+        # преобразую UUID в строку для поля id
         user_info["id"] = str(user_info["id"])
 
-        # Создаем экземпляр класса UserInfo с полученной информацией о пользователе
+        # создаю экземпляр класса UserInfo с полученной информацией о пользователе
         user_info_instance = UserInfo(**user_info)
 
         return user_info_instance
@@ -90,8 +71,10 @@ async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> Us
 # @router.patch("/me/")
 # async def update_user(access_token: str, data: CreateUser):
 #     try:
+#         # Преобразуем строку токена в байтовый формат
+#         access_token_bytes = access_token.encode("utf-8")
 #
-#         decoded_token = decode_jwt(access_token)
+#         decoded_token = await decode_jwt(access_token_bytes)
 #         user_id = str(decoded_token.get("user_id"))
 #         user_info = await db.get_user_info_by_id(session, user_id)
 #         user_info["id"] = str(user_info["id"])
@@ -106,34 +89,42 @@ async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> Us
 #
 #     return user
 
-
-@router.patch("/me/")
-async def update_user(access_token: str, data: CreateUser):
+@router.patch("/me/", response_model=CreateUser)
+async def update_user(data: CreateUser, credentials: HTTPBasicCredentials = Depends(security)) -> CreateUser:
     try:
-        # Преобразуем строку токена в байтовый формат
-        access_token_bytes = access_token.encode("utf-8")
+        # Проверяем, были ли предоставлены учетные данные
+        if not (credentials.username and credentials.password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        decoded_token = decode_jwt(access_token_bytes)
+        # Получаем токен доступа из учетных данных пользователя
+        access_token = await get_access_token(credentials.username, credentials.password)
+
+        # Извлекаем user_id из токена
+        decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
+
+        # Получаем информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id)
+
+        # Преобразуем UUID в строку для поля id
         user_info["id"] = str(user_info["id"])
+
+        user_data = data.dict()
+        user = await db.update(session, user_id, data=user_data)
+
+        return user
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Access token has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid access token")
 
-    user_data = data.dict()
-    user = await db.update(session, user_id, data=user_data)
-
-    return user
-
 
 @router.delete("/me/", status_code=HTTPStatus.NO_CONTENT)
 async def delete_user(access_token: str) -> None:
     try:
         # user_id из верифицированного токена
-        decoded_token = decode_jwt(access_token)
+        decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
 
     except jwt.ExpiredSignatureError:

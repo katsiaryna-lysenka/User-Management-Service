@@ -32,11 +32,29 @@ def encode_jwt(
     return encoded
 
 
-def decode_jwt(
+# def decode_jwt(
+#     token: str | bytes,
+#     public_key: str = settings.auth_jwt.public_key_path.read_text(),
+#     algorithms: str = settings.auth_jwt.algorithms,
+# ):
+#     decoded = jwt.decode(
+#         token,
+#         public_key,
+#         algorithms=[algorithms],
+#     )
+#
+#     return decoded
+
+
+async def decode_jwt(
     token: str | bytes,
-    public_key: str = settings.auth_jwt.public_key_path.read_text(),
+    public_key: str = None,
     algorithms: str = settings.auth_jwt.algorithms,
 ):
+    if public_key is None:
+        with open(settings.auth_jwt.public_key_path, "r") as file:
+            public_key = file.read()
+
     decoded = jwt.decode(
         token,
         public_key,
