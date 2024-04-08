@@ -2,6 +2,7 @@ from datetime import datetime
 from http import HTTPStatus
 
 from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi.security import HTTPBasicCredentials, HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -10,6 +11,8 @@ from core.config import engine
 from core.models import User
 from users.crud import CRUD
 from users.schemas import CreateUser, LoginInput
+
+# from users.crud import authenticate_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 session = async_sessionmaker(bind=engine, expire_on_commit=False)
@@ -35,7 +38,7 @@ async def create_user(user_data: CreateUser) -> dict:
         group=user_data.group,
         is_blocked=user_data.is_blocked,
         created_at=user_data.created_at,
-        modified_at=user_data.modified_at
+        modified_at=user_data.modified_at,
     )
 
     user = await db.add(session, new_user)
@@ -52,33 +55,57 @@ async def create_user(user_data: CreateUser) -> dict:
         "group": user.group,
         "is_blocked": user.is_blocked,
         "created_at": user.created_at,
-        "modified_at": user.modified_at
+        "modified_at": user.modified_at,
     }
 
     return user_dict
 
 
+security = HTTPBasic()
+from users.crud import CRUD
+
+crud = CRUD()
+
+
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
-async def return_tokens(user_data: LoginInput) -> dict:
-    # аутентифицирую пользователя
+async def return_tokens(credentials: HTTPBasicCredentials = Depends(security)) -> dict:
     try:
-        user = await db.get_by_login(session, user_data.username)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        # аутентификация пользователя
+        user = await crud.authenticate_user(credentials.username, credentials.password)
 
-    # проверка пароль
-    if user.password != user_data.password:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        # создаю токены доступа и обновления
+        access_token = encode_jwt({"user_id": str(user.id)})
+        refresh_token = encode_jwt(
+            {"user_id": str(user.id)},
+            expire_minutes=60,  # Токен обновления сроком на 1 час
+        )
 
-    # создаю токены доступа и обновления
-    access_token = encode_jwt({"user_id": str(user.id)})
-    refresh_token = encode_jwt(
-        {"user_id": str(user.id)},
-        expire_minutes=60,  # Токен обновления сроком на 1 час
-    )
+        # возвращаю токены в формате словаря
+        return {"access_token": access_token, "refresh_token": refresh_token}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
-    # возвращаю токены в формате словаря
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token
-    }
+
+async def get_access_token(username: str, password: str) -> bytes:
+    try:
+        # Получаем словарь с токенами доступа от функции return_tokens
+        tokens = await return_tokens(
+            HTTPBasicCredentials(username=username, password=password)
+        )
+
+        # Извлекаем токен доступа из словаря
+        access_token = tokens.get("access_token")
+
+        # Если токен доступа не был получен, возникает ошибка
+        if not access_token:
+            raise HTTPException(
+                status_code=500, detail="Failed to generate access token"
+            )
+
+        # Преобразуем токен доступа в байтовый формат
+        access_token_bytes = access_token.encode()
+
+        return access_token_bytes
+    except HTTPException as e:
+        # Если возникла ошибка при получении токена доступа, пробрасываем ее дальше
+        raise e

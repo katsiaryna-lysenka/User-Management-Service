@@ -1,9 +1,13 @@
+from typing import List
+
 from fastapi import HTTPException
+from fastapi.security import HTTPBasicCredentials
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
 from core.models import User
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, async_session
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from core.config import settings
+
 
 db_url = settings.db_url
 
@@ -39,7 +43,7 @@ class CRUD:
             return result.scalars().one()
 
     async def update(
-            self, async_session: async_sessionmaker[AsyncSession], user_id, data
+        self, async_session: async_sessionmaker[AsyncSession], user_id, data
     ):
         async with async_session() as session:
             statement = select(User).filter(User.id == user_id)
@@ -62,7 +66,9 @@ class CRUD:
 
             return user
 
-    async def delete(self, async_session: async_sessionmaker[AsyncSession], user_id: str):
+    async def delete(
+        self, async_session: async_sessionmaker[AsyncSession], user_id: str
+    ):
         async with async_session() as session:
             user = await session.get(User, user_id)
             if user:
@@ -71,13 +77,13 @@ class CRUD:
             else:
                 raise HTTPException(status_code=404, detail="User not found")
 
-    async def get_by_login(
-            self, async_session: AsyncSession, login: str
-    ) -> User:
+    async def get_by_login(self, async_session: AsyncSession, login: str) -> User:
 
         async with async_session() as session:
             statement = select(User).filter(
-                (User.username == login) | (User.email == login) | (User.phone_number == login)
+                (User.username == login)
+                | (User.email == login)
+                | (User.phone_number == login)
             )
 
             result = await session.execute(statement)
@@ -88,7 +94,9 @@ class CRUD:
 
             return user
 
-    async def get_user(self, async_session: async_sessionmaker[AsyncSession], user_id: str) -> User:
+    async def get_user(
+        self, async_session: async_sessionmaker[AsyncSession], user_id: str
+    ) -> User:
         async with async_session() as session:
             statement = select(User).filter(User.id == user_id)
             result = await session.execute(statement)
@@ -97,7 +105,9 @@ class CRUD:
                 raise ValueError(f"User with id {user_id} not found")
             return user
 
-    async def get_user_info_by_id(self, async_session: async_sessionmaker[AsyncSession], user_id: str) -> dict:
+    async def get_user_info_by_id(
+        self, async_session: async_sessionmaker[AsyncSession], user_id: str
+    ) -> dict:
         try:
             if not user_id:
                 raise ValueError("User ID is not provided")
@@ -114,7 +124,7 @@ class CRUD:
                 "email": user.email,
                 "phone_number": user.phone_number,
                 "role": user.role,
-                "group": user.group
+                "group": user.group,
             }
             return user_info
         except NoResultFound:
@@ -126,7 +136,9 @@ class CRUD:
         except AttributeError as ae:
             raise ValueError(f"Attribute error occurred: {ae}")
         except Exception as e:
-            raise ValueError(f"An unexpected error occurred while fetching user information: {e}")
+            raise ValueError(
+                f"An unexpected error occurred while fetching user information: {e}"
+            )
 
     async def get_by_group(
         self, async_session: async_sessionmaker[AsyncSession], current_user_group: str
@@ -139,4 +151,77 @@ class CRUD:
 
             return result.scalars().all()
 
+    # new
+    # from sqlalchemy import select, or_
 
+    async def get_with_parameters(
+        self,
+        async_session: async_sessionmaker[AsyncSession],
+        page: int,
+        limit: int,
+        filter_by_name: str,
+        sort_by: str,
+        order_by: str,
+        groups: List[str],
+    ):
+        async with async_session() as session:
+            # Получаем объект Select для таблицы User
+            statement = select(User)
+
+            # Формируем условия для фильтрации по группе
+            group_conditions = [User.group == group for group in groups]
+
+            # Собираем все условия в одно выражение с оператором ИЛИ
+            group_filter = or_(*group_conditions)
+
+            # Применяем фильтрацию по пользователям из определенных групп
+            statement = statement.filter(group_filter)
+
+            # Применяем фильтрацию по имени, если она задана
+            if filter_by_name:
+                statement = statement.filter(User.name == filter_by_name)
+
+            # Определяем сортировку
+            sort_column = getattr(User, sort_by, None)
+            if sort_column:
+                if order_by == "asc":
+                    statement = statement.order_by(sort_column.asc())
+                elif order_by == "desc":
+                    statement = statement.order_by(sort_column.desc())
+                else:
+                    raise ValueError(
+                        "Invalid value for 'order_by'. Must be 'asc' or 'desc'."
+                    )
+
+            # Вычисляем смещение и ограничение для пагинации
+            offset = (page - 1) * limit
+            statement = statement.offset(offset).limit(limit)
+
+            # Выполняем запрос и возвращаем результат
+            result = await session.execute(statement)
+            users = result.scalars().all()
+
+            return users
+
+    async def get_all_groups(self, async_session: async_sessionmaker[AsyncSession]):
+        async with async_session() as session:
+            statement = select(User.group).distinct()
+            result = await session.execute(statement)
+            groups = [row[0] for row in result.fetchall()]
+            return groups
+
+    async def authenticate_user(
+        self,
+        async_session: async_sessionmaker[AsyncSession],
+        username: str,
+        password: str,
+    ):
+        # аутентификация пользователя
+        user = await self.get_by_login(async_session, username)
+        if not user:
+            raise ValueError("Invalid credentials")
+
+        if user.password != password:
+            raise ValueError("Invalid credentials")
+
+        return user
