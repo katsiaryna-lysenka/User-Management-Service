@@ -57,3 +57,22 @@ class UserInfo(BaseModel):
     phone_number: str
     role: str
     group: str
+
+
+class UpdateUser(BaseModel):
+    name: str
+    surname: str
+    username: constr(min_length=3, max_length=20)
+    password: str
+    phone_number: str
+    email: EmailStr
+    role: str
+    group: str
+    is_blocked: bool = False
+    modified_at: Optional[datetime] = None
+
+
+class TokenInfo(BaseModel):
+    access_token: str
+    refresh_token: str | None = None
+    token_type: str = "Bearer"

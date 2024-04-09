@@ -10,6 +10,9 @@ services:
       - "5000:5000"
     depends_on:
       - postgresql  # Зависимость от контейнера с PostgreSQL
+      - redis
+    environment:
+      - REDIS_HOST=redis_manager
 
   postgresql:
     image: postgres:latest
@@ -21,6 +24,11 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345
       - POSTGRES_DB=postgres
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
 
 
 

@@ -151,9 +151,6 @@ class CRUD:
 
             return result.scalars().all()
 
-    # new
-    # from sqlalchemy import select, or_
-
     async def get_with_parameters(
         self,
         async_session: async_sessionmaker[AsyncSession],
@@ -165,23 +162,23 @@ class CRUD:
         groups: List[str],
     ):
         async with async_session() as session:
-            # Получаем объект Select для таблицы User
+            # получаю объект Select для таблицы User
             statement = select(User)
 
-            # Формируем условия для фильтрации по группе
+            # формирую условия для фильтрации по группе
             group_conditions = [User.group == group for group in groups]
 
-            # Собираем все условия в одно выражение с оператором ИЛИ
+            # собираю все условия в одно выражение с оператором ИЛИ
             group_filter = or_(*group_conditions)
 
-            # Применяем фильтрацию по пользователям из определенных групп
+            # применяю фильтрацию по пользователям из определенных групп
             statement = statement.filter(group_filter)
 
-            # Применяем фильтрацию по имени, если она задана
+            # применяю фильтрацию по имени, если она задана
             if filter_by_name:
                 statement = statement.filter(User.name == filter_by_name)
 
-            # Определяем сортировку
+            # определяю сортировку
             sort_column = getattr(User, sort_by, None)
             if sort_column:
                 if order_by == "asc":
@@ -193,11 +190,11 @@ class CRUD:
                         "Invalid value for 'order_by'. Must be 'asc' or 'desc'."
                     )
 
-            # Вычисляем смещение и ограничение для пагинации
+            # вычисляю смещение и ограничение для пагинации
             offset = (page - 1) * limit
             statement = statement.offset(offset).limit(limit)
 
-            # Выполняем запрос и возвращаем результат
+            # выполняю запрос и возвращаем результат
             result = await session.execute(statement)
             users = result.scalars().all()
 

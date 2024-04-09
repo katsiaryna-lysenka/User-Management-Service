@@ -3,7 +3,7 @@ from auth.utils import decode_jwt
 from auth.views import get_access_token
 from users.crud import CRUD
 from core.config import engine
-from users.schemas import CreateUser, UserSchema, UserInfo
+from users.schemas import CreateUser, UserSchema, UserInfo, UpdateUser
 from http import HTTPStatus
 from typing import List, Union
 from core.models import User
@@ -11,6 +11,7 @@ from core.models.role import State
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from fastapi import APIRouter, HTTPException
 import jwt
+from fastapi import Query
 
 session = async_sessionmaker(bind=engine, expire_on_commit=False)
 db = CRUD()
@@ -47,7 +48,9 @@ async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> Us
             raise ValueError("Invalid credentials")
 
         # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(credentials.username, credentials.password)
+        access_token = await get_access_token(
+            credentials.username, credentials.password
+        )
 
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
@@ -68,45 +71,28 @@ async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> Us
         raise HTTPException(status_code=401, detail=str(e))
 
 
-# @router.patch("/me/")
-# async def update_user(access_token: str, data: CreateUser):
-#     try:
-#         # Преобразуем строку токена в байтовый формат
-#         access_token_bytes = access_token.encode("utf-8")
-#
-#         decoded_token = await decode_jwt(access_token_bytes)
-#         user_id = str(decoded_token.get("user_id"))
-#         user_info = await db.get_user_info_by_id(session, user_id)
-#         user_info["id"] = str(user_info["id"])
-#
-#     except jwt.ExpiredSignatureError:
-#         raise HTTPException(status_code=401, detail="Access token has expired")
-#     except jwt.InvalidTokenError:
-#         raise HTTPException(status_code=401, detail="Invalid access token")
-#
-#     user_data = data.dict()
-#     user = await db.update(session, user_id, data=user_data)
-#
-#     return user
-
-@router.patch("/me/", response_model=CreateUser)
-async def update_user(data: CreateUser, credentials: HTTPBasicCredentials = Depends(security)) -> CreateUser:
+@router.patch("/me/", response_model=UpdateUser)
+async def update_user(
+    data: UpdateUser, credentials: HTTPBasicCredentials = Depends(security)
+) -> UpdateUser:
     try:
-        # Проверяем, были ли предоставлены учетные данные
+        # проверяю, были ли предоставлены учетные данные
         if not (credentials.username and credentials.password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        # Получаем токен доступа из учетных данных пользователя
-        access_token = await get_access_token(credentials.username, credentials.password)
+        # получаю токен доступа из учетных данных пользователя
+        access_token = await get_access_token(
+            credentials.username, credentials.password
+        )
 
-        # Извлекаем user_id из токена
+        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
 
-        # Получаем информацию о пользователе по его ID
+        # получаю информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id)
 
-        # Преобразуем UUID в строку для поля id
+        # преобразую UUID в строку для поля id
         user_info["id"] = str(user_info["id"])
 
         user_data = data.dict()
@@ -121,184 +107,199 @@ async def update_user(data: CreateUser, credentials: HTTPBasicCredentials = Depe
 
 
 @router.delete("/me/", status_code=HTTPStatus.NO_CONTENT)
-async def delete_user(access_token: str) -> None:
+async def delete_user(credentials: HTTPBasicCredentials = Depends(security)) -> None:
     try:
-        # user_id из верифицированного токена
+        # проверяю, были ли предоставлены учетные данные
+        if not (credentials.username and credentials.password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        # получаю токен доступа из учетных данных пользователя
+        access_token = await get_access_token(
+            credentials.username, credentials.password
+        )
+
+        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
+
+        # получаю информацию о пользователе по его ID
+        user_info = await db.get_user_info_by_id(session, user_id)
+
+        # преобразую UUID в строку для поля id
+        user_info["id"] = str(user_info["id"])
+
+        await db.delete(session, user_id)
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Access token has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid access token")
 
-    await db.delete(session, user_id)
+
+@router.get("/{user_id}/", response_model=UserInfo)
+async def get_user_by_id(
+    user_id: str, credentials: HTTPBasicCredentials = Depends(security)
+) -> UserInfo:
+    try:
+        # проверяю, были ли предоставлены учетные данные
+        if not (credentials.username and credentials.password):
+            raise ValueError("Invalid credentials")
+
+        # получаю токен доступа из учетных данных пользователя
+        access_token = await get_access_token(
+            credentials.username, credentials.password
+        )
+
+        # извлекаю user_id из токена
+        decoded_token = await decode_jwt(access_token)
+        user_id_main = str(decoded_token.get("user_id"))
+
+        # получаю информацию о пользователе по его ID
+        user_info = await db.get_user_info_by_id(session, user_id_main)
+
+        # извлекаю роль пользователя из информации о пользователе
+        user_role = user_info.get("role")
+
+        # проверяю роль пользователя и выполняем соответствующие действия
+        if user_role == State.ADMIN.value:
+            # получаю информацию о пользователе по его ID
+            user_info = await db.get_user_info_by_id(session, user_id)
+            user_info["id"] = str(user_info["id"])
+
+            # создаю экземпляр класса UserInfo с полученной информацией о пользователе
+            user_info_instance = UserInfo(**user_info)
+
+            return user_info_instance
+
+        elif user_role == State.MODERATOR.value:
+            # получаю информацию о пользователе по его ID
+            user_info = await db.get_user_info_by_id(session, user_id)
+            if (
+                user_info["group"]
+                == (await db.get_user_info_by_id(session, user_id))["group"]
+            ):
+                user_info["id"] = str(user_info["id"])
+
+                # создаю экземпляр класса UserInfo с полученной информацией о пользователе
+                user_info_instance = UserInfo(**user_info)
+
+                return user_info_instance
+            else:
+                raise HTTPException(status_code=403, detail="Access denied")
+        else:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{user_id}/")
-async def get_user_by_id(user_id: str) -> Union[List[dict], dict]:
-
-    user = await db.get_by_id(session, user_id)
-
-    # получаю роль текущего пользователя
-    current_user_role = user.role
-    current_user_group = user.group
-
-    if current_user_role == State.ADMIN.value:
-        # получаю всех пользователей из базы данных
-        users = await db.get_all(session)
-
-        # преобразую пароли из строкового формата в байты
-        for user_obj in users:
-            user_obj.password = user_obj.password.encode()
-
-        # преобразую объекты пользователя в словари
-        user_dicts = [
-            {
-                "id": user_obj.id,
-                "name": user_obj.name,
-                "surname": user_obj.surname,
-                "username": user_obj.username,
-                "phone_number": user_obj.phone_number,
-                "email": user_obj.email,
-                "role": user_obj.role,
-                "group": user_obj.group,
-                "is_blocked": user_obj.is_blocked,
-                "created_at": user_obj.created_at,
-                "modified_at": user_obj.modified_at,
-            }
-            for user_obj in users
-        ]
-
-        return user_dicts
-
-    elif current_user_role == State.MODERATOR.value:
-
-        # получаем информацию о пользователях с тем же параметром group
-
-        users = await db.get_by_group(session, current_user_group)
-
-        user_dicts = [
-            {
-                "id": user.id,
-                "name": user.name,
-                "surname": user.surname,
-                "username": user.username,
-                "phone_number": user.phone_number,
-                "email": user.email,
-                "role": user.role,
-                "group": user.group,
-                "is_blocked": user.is_blocked,
-                "created_at": user.created_at,
-                "modified_at": user.modified_at,
-            }
-            for user in users
-        ]
-
-        return user_dicts
-
-    else:
-
-        # если роль USER, возвращаю сообщение об отсутствии доступа
-
-        return {"message": "Insufficient access rights"}
-
-
-# new
-@router.patch("/{user_id}/")
+@router.patch("/{user_id}/", response_model=UpdateUser)
 async def update_user_for_admin(
-    admin_user_id: str, target_user_id: str, data: CreateUser
-):
-    # Check if the admin_user_id corresponds to an admin user
-    admin_user = await db.get_by_id(session, admin_user_id)
-    if admin_user.role != State.ADMIN.value:
-        return {"message": "Insufficient access rights"}
+    user_id: str,
+    data: UpdateUser,
+    credentials: HTTPBasicCredentials = Depends(security),
+) -> UpdateUser:
+    try:
+        # проверяю, были ли предоставлены учетные данные
+        if not (credentials.username and credentials.password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Get the target user by ID
-    target_user = await db.get_by_id(session, target_user_id)
+        # получаю токен доступа из учетных данных пользователя
+        access_token = await get_access_token(
+            credentials.username, credentials.password
+        )
 
-    # Convert CreateUser object to a dictionary
-    user_data = data.dict()
+        # извлекаю user_id из токена
+        decoded_token = await decode_jwt(access_token)
+        user_id_main = str(decoded_token.get("user_id"))
 
-    # Update the target user with new data
-    updated_user = await db.update(session, target_user_id, user_data)
+        # получаю информацию о пользователе по его ID
+        user_info = await db.get_user_info_by_id(session, user_id_main)
 
-    # Construct the response dictionary
-    user_dict = {
-        "id": updated_user.id,
-        "name": updated_user.name,
-        "surname": updated_user.surname,
-        "username": updated_user.username,
-        "phone_number": updated_user.phone_number,
-        "email": updated_user.email,
-        "role": updated_user.role,
-        "group": updated_user.group,
-        "is_blocked": updated_user.is_blocked,
-        "created_at": updated_user.created_at,
-        "modified_at": updated_user.modified_at,
-    }
+        # извлекю роль пользователя из информации о пользователе
+        user_role = user_info.get("role")
 
-    return user_dict
+        # проверяю роль пользователя
+        if user_role != State.ADMIN.value:
+            raise HTTPException(status_code=403, detail="Insufficient access rights")
 
+        # обновляю информацию о пользователе
+        updated_user = await db.update(session, user_id, data.dict())
 
-from fastapi import Query
+        return updated_user
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/users")
 async def get_users_for_parameters(
-    user_id: str,
     page: int = Query(1),
     limit: int = Query(30),
     filter_by_name: str = Query(None),
     sort_by: str = Query(None),
     order_by: str = Query(None, regex="^(asc|desc)$"),
+    credentials: HTTPBasicCredentials = Depends(security),
 ):
 
-    user = await db.get_by_id(session, user_id)
+    try:
+        # проверяю, были ли предоставлены учетные данные
+        if not (credentials.username and credentials.password):
+            raise ValueError("invalid credentials")
 
-    # получаю роль текущего пользователя
-    current_user_role = user.role
-    current_user_group = user.group
-
-    if current_user_role == State.ADMIN.value:
-
-        # Получаем все группы пользователей
-        all_groups = await db.get_all_groups(session)
-
-        # Вызываем функцию get_with_parameters, передавая ей параметры из запроса
-        users = await db.get_with_parameters(
-            async_session=session,
-            page=page,
-            limit=limit,
-            filter_by_name=filter_by_name,
-            sort_by=sort_by,
-            order_by=order_by,
-            groups=all_groups,  # Передаем список всех групп
-        )
-        return users
-
-    elif current_user_role == State.MODERATOR.value:
-        # Получаем информацию о пользователях с тем же параметром group
-        users_in_group = await db.get_by_group(session, current_user_group)
-
-        # Применяем фильтрацию, сортировку и пагинацию к пользователям из группы
-        filtered_users = await db.get_with_parameters(
-            async_session=session,
-            page=page,
-            limit=limit,
-            filter_by_name=filter_by_name,
-            sort_by=sort_by,
-            order_by=order_by,
-            groups=[
-                user.group for user in users_in_group
-            ],  # Передаем список всех групп
+        # получаю токен доступа из учетных данных пользователя
+        access_token = await get_access_token(
+            credentials.username, credentials.password
         )
 
-        # Возвращаем отфильтрованный список пользователей из группы
-        return filtered_users
+        # извлекаю user_id из токена
+        decoded_token = await decode_jwt(access_token)
+        user_id_main = str(decoded_token.get("user_id"))
 
-    else:
+        # получаю информацию о пользователе по его id
+        user_info = await db.get_user_info_by_id(session, user_id_main)
 
-        # если роль USER, возвращаю сообщение об отсутствии доступа
+        # извлекаю роль пользователя из информации о пользователе
+        user_role = user_info.get("role")
 
-        return {"message": "Insufficient access rights"}
+        if user_role == State.ADMIN.value:
+            # получаем все группы пользователей
+            all_groups = await db.get_all_groups(session)
+
+            # вызываю функцию get_with_parameters, передавая ей параметры из запроса
+            users = await db.get_with_parameters(
+                async_session=session,
+                page=page,
+                limit=limit,
+                filter_by_name=filter_by_name,
+                sort_by=sort_by,
+                order_by=order_by,
+                groups=all_groups,  # передаю список всех групп
+            )
+            return users
+
+        elif user_role == State.MODERATOR.value:
+            # получаю group текущего пользователя
+            user_group = user_info["group"]
+
+            # вызываю функцию get_with_parameters с указанием группы пользователя
+            users = await db.get_with_parameters(
+                async_session=session,
+                page=page,
+                limit=limit,
+                filter_by_name=filter_by_name,
+                sort_by=sort_by,
+                order_by=order_by,
+                groups=[user_group],  # передаю группу текущего пользователя
+            )
+            return users
+
+        else:
+            # если роль user, возвращаю сообщение об отсутствии доступа
+            return {"message": "insufficient access rights"}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
