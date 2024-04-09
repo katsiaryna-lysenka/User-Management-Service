@@ -2,9 +2,9 @@ from datetime import datetime
 from http import HTTPStatus
 
 from auth.utils import encode_jwt
+from rabbitmq_management_field.rebbitmq_management import rabbitmq_management
 from redis_manager_field.redis_manager import redis_manager
 from users.schemas import TokenInfo
-
 from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 
@@ -14,7 +14,7 @@ from auth.helpers import create_access_token, create_refresh_token
 from core.config import engine
 from core.models import User
 from users.crud import CRUD
-from users.schemas import CreateUser, LoginInput, UserSchema
+from users.schemas import CreateUser
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -125,6 +125,7 @@ async def get_refresh_token(username: str, password: str) -> bytes:
         # извлекаю токен доступа из словаря
         refresh_token = tokens.get("refresh_token")
 
+        print(f"refresh_token = {refresh_token}")
         # если токен доступа не был получен, возникает ошибка
         if not refresh_token:
             raise HTTPException(
@@ -134,35 +135,12 @@ async def get_refresh_token(username: str, password: str) -> bytes:
         # преобразую токен доступа в байтовый формат
         refresh_token_bytes = refresh_token.encode()
 
+        print(f"refresh_token_bytes = {refresh_token_bytes}")
         return refresh_token_bytes
     except HTTPException as e:
 
         # если возникла ошибка при получении токена доступа, пробрасываю ее дальше
         raise e
-
-
-# @router.post("/refresh/", response_model=TokenInfo, response_model_exclude_none=True)
-# async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)):
-#     try:
-#         # аутентификация пользователя
-#         user = await crud.authenticate_user(
-#             session, credentials.username, credentials.password
-#         )
-#
-#         access_token = create_access_token(user)
-#         new_refresh_token = create_refresh_token(user)
-#
-#         # Добавляем старый refresh токен в черный список
-#         old_refresh_token = credentials.password
-#         redis_manager_field.redisClient.set(old_refresh_token, "blacklisted")
-#
-#         return TokenInfo(
-#             access_token=access_token,
-#             refresh_token=new_refresh_token,
-#         )
-#
-#     except ValueError as e:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
 
 @router.post("/refresh/", response_model=TokenInfo, response_model_exclude_none=True)
@@ -194,3 +172,16 @@ async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+
+@router.post("/reset-password/")
+async def auth_reset_password(email: str):
+    try:
+        # Публикуем сообщение в очередь RabbitMQ
+        if rabbitmq_management.publish_reset_password_message(email):
+            return {"message": "Password reset request has been submitted."}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to submit password reset request.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")  # Выводим подробности об ошибке
+        raise HTTPException(status_code=500, detail="Internal Server Error")

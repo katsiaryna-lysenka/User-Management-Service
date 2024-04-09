@@ -9,10 +9,13 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - postgresql  # Зависимость от контейнера с PostgreSQL
+      - postgresql
       - redis
+      - rabbitmq
     environment:
       - REDIS_HOST=redis_manager_field
+    networks:
+      - backend
 
   postgresql:
     image: postgres:latest
@@ -24,11 +27,28 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345
       - POSTGRES_DB=postgres
+    networks:
+      - backend
 
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq-container
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # RabbitMQ Management
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
 
 
 
