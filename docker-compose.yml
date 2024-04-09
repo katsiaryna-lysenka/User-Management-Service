@@ -12,7 +12,7 @@ services:
       - postgresql  # Зависимость от контейнера с PostgreSQL
       - redis
     environment:
-      - REDIS_HOST=redis_manager
+      - REDIS_HOST=redis_manager_field
 
   postgresql:
     image: postgres:latest
