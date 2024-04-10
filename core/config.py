@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     db_echo: bool = True
 
     auth_jwt: AuthJWT = AuthJWT()
-    RABBITMQ_HOST: ClassVar[int] = 15672
+    # RABBITMQ_HOST: ClassVar[int] = 15672
+    RABBITMQ_HOST: ClassVar[str] = "rabbitmq-container"
 
 
 async def get_db():

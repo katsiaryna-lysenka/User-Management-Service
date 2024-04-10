@@ -1,11 +1,14 @@
 from datetime import datetime
 from http import HTTPStatus
 
+import redis
 from pydantic import EmailStr
+from redis import Redis
+from starlette.responses import JSONResponse
 
-from auth.functions import perform_reset_password
+import auth
+from auth.functions import perform_reset_password, get_refreshed_token
 from auth.utils import encode_jwt
-from redis_manager_field.redis_manager import redis_manager
 from users.schemas import TokenInfo
 from fastapi import APIRouter, status, HTTPException, Depends, Header
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
@@ -148,35 +151,46 @@ async def get_refresh_token(username: str, password: str) -> bytes:
         raise e
 
 
-@router.post("/refresh/", response_model=TokenInfo, response_model_exclude_none=True)
-async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)):
+# @router.post("/refresh/", response_model=TokenInfo, response_model_exclude_none=True)
+# async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)):
+#     try:
+#         # Аутентификация пользователя
+#         user = await crud.authenticate_user(
+#             session, credentials.username, credentials.password
+#         )
+#
+#         # Получаем старый refresh токен
+#         old_refresh_token = await get_refresh_token(
+#             credentials.username, credentials.password
+#         )
+#
+#         print(f"old_refresh_token = {old_refresh_token}")
+#
+#         # Генерируем новые токены доступа и обновления
+#         access_token = create_access_token(user)
+#         new_refresh_token = create_refresh_token(user)
+#
+#         # Добавляем старый refresh токен в черный список Redis
+#         redis_manager.redisClient.sadd("blacklisted", old_refresh_token)
+#
+#         return TokenInfo(
+#             access_token=access_token,
+#             refresh_token=new_refresh_token,
+#         )
+#
+#     except ValueError as e:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+
+@router.post("/refresh-token", response_model=TokenInfo)
+async def refresh_token(
+    token: str = Header(...), session: AsyncSession = Depends(get_db)
+):
     try:
-        # Аутентификация пользователя
-        user = await crud.authenticate_user(
-            session, credentials.username, credentials.password
-        )
-
-        # Получаем старый refresh токен
-        old_refresh_token = await get_refresh_token(
-            credentials.username, credentials.password
-        )
-
-        print(f"old_refresh_token = {old_refresh_token}")
-
-        # Генерируем новые токены доступа и обновления
-        access_token = create_access_token(user)
-        new_refresh_token = create_refresh_token(user)
-
-        # Добавляем старый refresh токен в черный список Redis
-        redis_manager.redisClient.sadd("blacklisted", old_refresh_token)
-
-        return TokenInfo(
-            access_token=access_token,
-            refresh_token=new_refresh_token,
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        response_data = await get_refreshed_token(token, session)
+        return JSONResponse(content=response_data, status_code=200)
+    except HTTPException as e:
+        return JSONResponse(content={"detail": e.detail}, status_code=e.status_code)
 
 
 @router.post("/reset-password", response_model=None)

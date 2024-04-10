@@ -2,13 +2,68 @@ import aio_pika
 
 import json
 
+import redis
+from redis import Redis
 from fastapi import Depends, HTTPException
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.helpers import create_refresh_token, create_reset_token
+from auth.helpers import (
+    create_refresh_token,
+    create_reset_token,
+    REFRESH_TOKEN_TYPE,
+    TOKEN_TYPE_FIELD,
+    create_access_token,
+)
+from auth.utils import decode_jwt
 from core.config import settings, get_db
 from core.models import User
+from jwt import InvalidTokenError
+
+from redis_manager_field import redis_manager
+
+
+async def get_refreshed_token(token: str, session: AsyncSession = Depends(get_db)):
+    try:
+        payload = await decode_jwt(token)
+        print(f"payload = {payload}")
+    except InvalidTokenError as e:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_id = payload.get("user_id")
+    print(f"user_id = {user_id}")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Получаем значение токена из Redis
+    redis_token_value = await redis_manager.redisClient.get(token)
+    if redis_token_value is not None:
+        raise HTTPException(status_code=401, detail="Refresh token is blacklisted")
+
+    # Получаем пользователя из базы данных, используя user_id
+    result = await session.execute(select(User).filter(User.user_id == user_id))
+    user = result.scalar_one_or_none()
+    print(f"user = {user}")
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Генерируем новый access токен
+    new_access_token = create_access_token(user)
+    print(f"new_access_token = {new_access_token}")
+
+    # Генерируем новый refresh токен
+    new_refresh_token = create_refresh_token(user)
+    print(f"new_refresh_token = {new_refresh_token}")
+
+    # Добавляем старый refresh токен в черный список в Redis
+    await redis_client.setex(
+        token, 1, settings.auth_jwt.refresh_token_expire_days * 24 * 60 * 60
+    )
+    print("Добавляем старый refresh токен в черный список в Redis")
+
+    return {"access_token": new_access_token, "refresh_token": new_refresh_token}
 
 
 async def perform_reset_password(email: str, session: AsyncSession = Depends(get_db)):
@@ -32,7 +87,7 @@ async def perform_reset_password(email: str, session: AsyncSession = Depends(get
 async def publish_reset_email_message(email: str, reset_token: str):
     try:
         connection = await aio_pika.connect_robust(
-            f"amqp://guest:guest@{settings.RABBITMQ_HOST}/"
+            f"amqp://guest:guest@{settings.RABBITMQ_HOST}/"  # ошибка тут!!
         )
     except aio_pika.exceptions.AMQPConnectionError as e:
         error_message = f"Error connecting to RabbitMQ: {str(e)}"
