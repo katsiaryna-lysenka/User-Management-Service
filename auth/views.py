@@ -10,7 +10,7 @@ import auth
 from auth.functions import perform_reset_password, get_refreshed_token
 from auth.utils import encode_jwt
 from users.schemas import TokenInfo
-from fastapi import APIRouter, status, HTTPException, Depends, Header
+from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
@@ -75,21 +75,34 @@ async def create_user(user_data: CreateUser) -> dict:
 
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
-async def return_tokens(credentials: HTTPBasicCredentials = Depends(security)) -> dict:
+async def return_tokens(username: str = Form(...),
+                        email: EmailStr = Form(None),
+                        phone_number: str = Form(None),
+                        password: str = Form(...)) -> dict:
     try:
-        # аутентификация пользователя
-        user = await crud.authenticate_user(
-            session, credentials.username, credentials.password
-        )
+        # Получение пользователя по логину (имя пользователя, адрес электронной почты или номер телефона)
+        user = None
+        if username:
+            user = await crud.get_by_login(session, username)
+        elif email:
+            user = await crud.get_by_login(session, email)
+        elif phone_number:
+            user = await crud.get_by_login(session, phone_number)
+        else:
+            raise ValueError("Login information missing")
 
-        # создаю токены доступа и обновления
+        # # Проверка пароля
+        # if not await verify_password(password, user.password):
+        #     raise ValueError("Incorrect password")
+
+        # Создание токенов доступа и обновления
         access_token = encode_jwt({"user_id": str(user.id)})
         refresh_token = encode_jwt(
             {"user_id": str(user.id)},
             expire_minutes=60,  # Токен обновления сроком на 1 час
         )
 
-        # возвращаю токены в формате словаря
+        # Возвращение токенов в формате словаря
         return {"access_token": access_token, "refresh_token": refresh_token}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))

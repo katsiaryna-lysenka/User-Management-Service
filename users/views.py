@@ -41,17 +41,8 @@ security = HTTPBasic()
 
 
 @router.get("/me/", response_model=UserInfo)
-async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> UserInfo:
+async def user_info(access_token: str) -> UserInfo:
     try:
-        # проверяю, были ли предоставлены учетные данные
-        if not (credentials.username and credentials.password):
-            raise ValueError("Invalid credentials")
-
-        # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(
-            credentials.username, credentials.password
-        )
-
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
 
@@ -67,38 +58,21 @@ async def user_info(credentials: HTTPBasicCredentials = Depends(security)) -> Us
         user_info_instance = UserInfo(**user_info)
 
         return user_info_instance
-    except (ValueError, HTTPException) as e:
+    except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
 
 @router.patch("/me/", response_model=UpdateUser)
-async def update_user(
-    data: UpdateUser, credentials: HTTPBasicCredentials = Depends(security)
-) -> UpdateUser:
+async def update_user(data: UpdateUser, access_token: str) -> UpdateUser:
     try:
-        # проверяю, были ли предоставлены учетные данные
-        if not (credentials.username and credentials.password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(
-            credentials.username, credentials.password
-        )
-
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
 
-        # получаю информацию о пользователе по его ID
-        user_info = await db.get_user_info_by_id(session, user_id)
+        # обновление информации о пользователе
+        updated_user = await db.update(session, user_id, data)
 
-        # преобразую UUID в строку для поля id
-        user_info["id"] = str(user_info["id"])
-
-        user_data = data.dict()
-        user = await db.update(session, user_id, data=user_data)
-
-        return user
+        return updated_user
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Access token has expired")
@@ -107,17 +81,8 @@ async def update_user(
 
 
 @router.delete("/me/", status_code=HTTPStatus.NO_CONTENT)
-async def delete_user(credentials: HTTPBasicCredentials = Depends(security)) -> None:
+async def delete_user(access_token: str) -> None:
     try:
-        # проверяю, были ли предоставлены учетные данные
-        if not (credentials.username and credentials.password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(
-            credentials.username, credentials.password
-        )
-
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))

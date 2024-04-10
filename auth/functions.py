@@ -22,6 +22,7 @@ from core.models import User
 from jwt import InvalidTokenError
 
 from redis_manager_field import redis_manager
+from redis_manager_field.redis_manager import RedisManager
 
 
 async def get_refreshed_token(token: str, session: AsyncSession = Depends(get_db)):
@@ -36,8 +37,16 @@ async def get_refreshed_token(token: str, session: AsyncSession = Depends(get_db
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+    # Инициализация клиента Redis
+    redis_client = RedisManager.redisClient
+    print(f"redis_client = {redis_client}")
+
+    if redis_client is None:
+        raise HTTPException(status_code=500, detail="Redis connection not available")
+
     # Получаем значение токена из Redis
-    redis_token_value = await redis_manager.redisClient.get(token)
+    redis_token_value = await redis_client.get(token)
+    print(f"redis_token_value = {redis_token_value}")
     if redis_token_value is not None:
         raise HTTPException(status_code=401, detail="Refresh token is blacklisted")
 
