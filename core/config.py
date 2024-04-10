@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, ClassVar
 
 from pydantic_settings import BaseSettings
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_session
 from sqlalchemy.ext.declarative import declarative_base
 import jwt
 from sqlalchemy.orm import sessionmaker
@@ -19,6 +19,7 @@ class AuthJWT(BaseModel):
     # access_token_expire_minutes: int = 15
     access_token_expire_minutes: int = 180
     refresh_token_expire_days: int = 2
+    reset_token_expire_days: int = 1
 
     class Config:
         from_attributes = True
@@ -31,30 +32,25 @@ class Settings(BaseSettings):
     db_echo: bool = True
 
     auth_jwt: AuthJWT = AuthJWT()
+    RABBITMQ_HOST: ClassVar[int] = 15672
+
+
+async def get_db():
+    db = None
+    try:
+        async with SessionLocal() as db:
+            yield db
+    finally:
+        if db is not None:
+            await db.close()
 
 
 engine = create_async_engine(Settings().db_url, echo=Settings().db_echo, future=True)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
+)
+
 
 Base = declarative_base()
 settings = Settings()
 auth_jwt = AuthJWT()
-
-
-# def create_access_token(user_id: str) -> str:
-#     """
-#     Создаю токен доступа для пользователя
-#     """
-#     expire = datetime.utcnow() + timedelta(minutes=auth_jwt.access_token_expire_minutes)
-#     to_encode = {"user_id": user_id, "exp": expire}
-#     encoded_jwt = jwt.encode(to_encode, auth_jwt.private_key_path, algorithm=auth_jwt.algorithms)
-#     return encoded_jwt
-#
-#
-# def create_refresh_token(user_id: str) -> str:
-#     """
-#     Создаю токен обновления для пользователя
-#     """
-#     expire = datetime.utcnow() + timedelta(days=auth_jwt.refresh_token_expire_days)
-#     to_encode = {"user_id": user_id, "exp": expire}
-#     encoded_jwt = jwt.encode(to_encode, auth_jwt.private_key_path, algorithm=auth_jwt.algorithms)
-#     return encoded_jwt

@@ -1,20 +1,25 @@
 from datetime import datetime
 from http import HTTPStatus
 
+from pydantic import EmailStr
+
+from auth.functions import perform_reset_password
 from auth.utils import encode_jwt
-from rabbitmq_management_field.rebbitmq_management import rabbitmq_management
 from redis_manager_field.redis_manager import redis_manager
 from users.schemas import TokenInfo
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Header
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from auth.helpers import create_access_token, create_refresh_token
-from core.config import engine
+from core.config import engine, settings, get_db
 from core.models import User
 from users.crud import CRUD
 from users.schemas import CreateUser
+import aio_pika
+
+import json
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -163,7 +168,7 @@ async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)
         new_refresh_token = create_refresh_token(user)
 
         # Добавляем старый refresh токен в черный список Redis
-        redis_manager.redisClient.set(old_refresh_token, "blacklisted")
+        redis_manager.redisClient.sadd("blacklisted", old_refresh_token)
 
         return TokenInfo(
             access_token=access_token,
@@ -174,14 +179,13 @@ async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
 
-@router.post("/reset-password/")
-async def auth_reset_password(email: str):
+@router.post("/reset-password", response_model=None)
+async def reset_password(
+    email: str = Header(...), session: AsyncSession = Depends(get_db)
+):
     try:
-        # Публикуем сообщение в очередь RabbitMQ
-        if rabbitmq_management.publish_reset_password_message(email):
-            return {"message": "Password reset request has been submitted."}
-        else:
-            raise HTTPException(status_code=500, detail="Failed to submit password reset request.")
+        return await perform_reset_password(email, session)
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        print(f"An error occurred: {str(e)}")  # Выводим подробности об ошибке
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=400, detail=e)

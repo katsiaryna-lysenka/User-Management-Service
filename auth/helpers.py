@@ -8,6 +8,7 @@ from users.schemas import UserSchema
 TOKEN_TYPE_FIELD = "type"
 ACCESS_TOKEN_TYPE = "access"
 REFRESH_TOKEN_TYPE = "refresh"
+RESET_TOKEN_TYPE = "reset"
 
 
 def create_jwt(
@@ -49,4 +50,17 @@ def create_refresh_token(user: UserSchema) -> str:
         token_type=REFRESH_TOKEN_TYPE,
         token_data=jwt_payload,
         expire_timedelta=timedelta(days=settings.auth_jwt.refresh_token_expire_days),
+    )
+
+
+def create_reset_token(user: UserSchema) -> str:
+    jwt_payload = {
+        "sub": user.email,
+        "reset_token": True,  # Добавляем поле для указания типа токена
+        # Здесь вы можете добавить другие поля, если необходимо
+    }
+    return create_jwt(
+        token_type=RESET_TOKEN_TYPE,
+        token_data=jwt_payload,
+        expire_timedelta=timedelta(days=settings.auth_jwt.reset_token_expire_days),
     )

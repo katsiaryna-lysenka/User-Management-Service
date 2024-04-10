@@ -21,6 +21,8 @@ bcrypt = "^4.1.2"
 python-multipart = "^0.0.9"
 pytz = "^2024.1"
 redis = "^5.0.3"
+requests = "^2.31.0"
+aio-pika = "^9.4.1"
 
 [tool.poetry.dev-dependencies]
 
