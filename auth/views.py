@@ -80,7 +80,7 @@ async def return_tokens(username: str = Form(...),
                         phone_number: str = Form(None),
                         password: str = Form(...)) -> dict:
     try:
-        # Получение пользователя по логину (имя пользователя, адрес электронной почты или номер телефона)
+        # получаю пользователя по логину (имя пользователя, адрес электронной почты или номер телефона)
         user = None
         if username:
             user = await crud.get_by_login(session, username)
@@ -91,18 +91,18 @@ async def return_tokens(username: str = Form(...),
         else:
             raise ValueError("Login information missing")
 
-        # # Проверка пароля
+        # # проверяю пароль
         # if not await verify_password(password, user.password):
         #     raise ValueError("Incorrect password")
 
-        # Создание токенов доступа и обновления
+        # созданю токены доступа и обновления
         access_token = encode_jwt({"user_id": str(user.id)})
         refresh_token = encode_jwt(
             {"user_id": str(user.id)},
             expire_minutes=60,  # Токен обновления сроком на 1 час
         )
 
-        # Возвращение токенов в формате словаря
+        # возвращение токены в формате словаря
         return {"access_token": access_token, "refresh_token": refresh_token}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
@@ -162,37 +162,6 @@ async def get_refresh_token(username: str, password: str) -> bytes:
 
         # если возникла ошибка при получении токена доступа, пробрасываю ее дальше
         raise e
-
-
-# @router.post("/refresh/", response_model=TokenInfo, response_model_exclude_none=True)
-# async def auth_refresh_jwt(credentials: HTTPBasicCredentials = Depends(security)):
-#     try:
-#         # Аутентификация пользователя
-#         user = await crud.authenticate_user(
-#             session, credentials.username, credentials.password
-#         )
-#
-#         # Получаем старый refresh токен
-#         old_refresh_token = await get_refresh_token(
-#             credentials.username, credentials.password
-#         )
-#
-#         print(f"old_refresh_token = {old_refresh_token}")
-#
-#         # Генерируем новые токены доступа и обновления
-#         access_token = create_access_token(user)
-#         new_refresh_token = create_refresh_token(user)
-#
-#         # Добавляем старый refresh токен в черный список Redis
-#         redis_manager.redisClient.sadd("blacklisted", old_refresh_token)
-#
-#         return TokenInfo(
-#             access_token=access_token,
-#             refresh_token=new_refresh_token,
-#         )
-#
-#     except ValueError as e:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
 
 @router.post("/refresh-token", response_model=TokenInfo)

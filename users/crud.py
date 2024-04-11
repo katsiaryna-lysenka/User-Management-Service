@@ -42,29 +42,6 @@ class CRUD:
 
             return result.scalars().one()
 
-    # async def update(
-    #     self, async_session: async_sessionmaker[AsyncSession], user_id, data
-    # ):
-    #     async with async_session() as session:
-    #         statement = select(User).filter(User.id == user_id)
-    #
-    #         result = await session.execute(statement)
-    #
-    #         user = result.scalars().one()
-    #
-    #         user.name = data["name"]
-    #         user.surname = data["surname"]
-    #         user.username = data["username"]
-    #         user.password = data["password"]
-    #         user.phone_number = data["phone_number"]
-    #         user.email = data["email"]
-    #         user.role = data["role"]
-    #         user.group = data["group"]
-    #         user.is_blocked = data["is_blocked"]
-    #
-    #         await session.commit()
-    #
-    #         return user
 
     async def update(
             self, async_session: async_sessionmaker[AsyncSession], user_id, data
@@ -89,6 +66,7 @@ class CRUD:
             await session.commit()
 
             return user
+
 
     async def delete(
         self, async_session: async_sessionmaker[AsyncSession], user_id: str

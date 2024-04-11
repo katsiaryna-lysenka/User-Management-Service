@@ -102,19 +102,8 @@ async def delete_user(access_token: str) -> None:
 
 
 @router.get("/{user_id}/", response_model=UserInfo)
-async def get_user_by_id(
-    user_id: str, credentials: HTTPBasicCredentials = Depends(security)
-) -> UserInfo:
+async def get_user_by_id(access_token: str, user_id: str) -> UserInfo:
     try:
-        # проверяю, были ли предоставлены учетные данные
-        if not (credentials.username and credentials.password):
-            raise ValueError("Invalid credentials")
-
-        # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(
-            credentials.username, credentials.password
-        )
-
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id_main = str(decoded_token.get("user_id"))
@@ -160,20 +149,11 @@ async def get_user_by_id(
 
 @router.patch("/{user_id}/", response_model=UpdateUser)
 async def update_user_for_admin(
+    access_token: str,
     user_id: str,
     data: UpdateUser,
-    credentials: HTTPBasicCredentials = Depends(security),
 ) -> UpdateUser:
     try:
-        # проверяю, были ли предоставлены учетные данные
-        if not (credentials.username and credentials.password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(
-            credentials.username, credentials.password
-        )
-
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id_main = str(decoded_token.get("user_id"))
@@ -189,7 +169,7 @@ async def update_user_for_admin(
             raise HTTPException(status_code=403, detail="Insufficient access rights")
 
         # обновляю информацию о пользователе
-        updated_user = await db.update(session, user_id, data.dict())
+        updated_user = await db.update(session, user_id, data)
 
         return updated_user
 
@@ -202,24 +182,15 @@ async def update_user_for_admin(
 
 @router.get("/users")
 async def get_users_for_parameters(
+    access_token: str,
     page: int = Query(1),
     limit: int = Query(30),
     filter_by_name: str = Query(None),
     sort_by: str = Query(None),
     order_by: str = Query(None, regex="^(asc|desc)$"),
-    credentials: HTTPBasicCredentials = Depends(security),
 ):
 
     try:
-        # проверяю, были ли предоставлены учетные данные
-        if not (credentials.username and credentials.password):
-            raise ValueError("invalid credentials")
-
-        # получаю токен доступа из учетных данных пользователя
-        access_token = await get_access_token(
-            credentials.username, credentials.password
-        )
-
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id_main = str(decoded_token.get("user_id"))
