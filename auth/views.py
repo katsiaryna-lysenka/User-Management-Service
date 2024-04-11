@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 
 import auth
 from auth.functions import perform_reset_password, get_refreshed_token
-from auth.utils import encode_jwt
+from auth.utils import encode_jwt, hash_password, validate_password
 from users.schemas import TokenInfo
 from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
@@ -39,12 +39,18 @@ async def create_user(user_data: CreateUser) -> dict:
     user_data.created_at = datetime.now()
     user_data.modified_at = datetime.now()
 
+    # хеширую пароль
+    hashed_password = hash_password(user_data.password)
+
+    # преобразую хешированный пароль в строку
+    hashed_password_str = hashed_password.decode()
+
     new_user = User(
         id=user_data.id,
         name=user_data.name,
         surname=user_data.surname,
         username=user_data.username,
-        password=user_data.password,
+        password=hashed_password_str,
         phone_number=user_data.phone_number,
         email=user_data.email,
         role=user_data.role,
@@ -75,12 +81,18 @@ async def create_user(user_data: CreateUser) -> dict:
 
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
-async def return_tokens(username: str = Form(...),
-                        email: EmailStr = Form(None),
-                        phone_number: str = Form(None),
-                        password: str = Form(...)) -> dict:
+async def return_tokens(
+    username: str = Form(None),
+    email: EmailStr = Form(None),
+    phone_number: str = Form(None),
+    password: str = Form(...),
+) -> dict:
     try:
-        # получаю пользователя по логину (имя пользователя, адрес электронной почты или номер телефона)
+        # проверю наличие информации для входа
+        if not any([username, email, phone_number]):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Login information missing")
+
+        # полученю пользователя из базы данных
         user = None
         if username:
             user = await crud.get_by_login(session, username)
@@ -88,24 +100,32 @@ async def return_tokens(username: str = Form(...),
             user = await crud.get_by_login(session, email)
         elif phone_number:
             user = await crud.get_by_login(session, phone_number)
-        else:
-            raise ValueError("Login information missing")
 
-        # # проверяю пароль
-        # if not await verify_password(password, user.password):
-        #     raise ValueError("Incorrect password")
+        # проверяю наличие пользователя
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+        # хеширую пароля
+        hashed_password = hash_password(password)
+
+        # провеяю пароля
+        if not validate_password(password, hashed_password):  # убрано await здесь
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
 
         # созданю токены доступа и обновления
         access_token = encode_jwt({"user_id": str(user.id)})
         refresh_token = encode_jwt(
             {"user_id": str(user.id)},
-            expire_minutes=60,  # Токен обновления сроком на 1 час
+            expire_minutes=60,
         )
 
-        # возвращение токены в формате словаря
+        # возвращеню токены в формате словаря
         return {"access_token": access_token, "refresh_token": refresh_token}
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 async def get_access_token(username: str, password: str) -> bytes:

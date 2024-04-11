@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from fastapi import APIRouter, HTTPException
 import jwt
 from fastapi import Query
+from fastapi import HTTPException
 
 session = async_sessionmaker(bind=engine, expire_on_commit=False)
 db = CRUD()
@@ -30,14 +31,6 @@ async def get_all_users():
         user.password = user.password.encode()
 
     return users
-
-
-# new
-
-from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-
-security = HTTPBasic()
 
 
 @router.get("/me/", response_model=UserInfo)
@@ -62,12 +55,16 @@ async def user_info(access_token: str) -> UserInfo:
         raise HTTPException(status_code=401, detail=str(e))
 
 
+
 @router.patch("/me/", response_model=UpdateUser)
 async def update_user(data: UpdateUser, access_token: str) -> UpdateUser:
     try:
         # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
+
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="User ID not found in token")
 
         # обновление информации о пользователе
         updated_user = await db.update(session, user_id, data)
