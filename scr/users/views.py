@@ -1,15 +1,12 @@
-import core
-from auth.utils import decode_jwt
-from auth.views import get_access_token
-from users.crud import CRUD
-from core.config import engine
-from users.schemas import CreateUser, UserSchema, UserInfo, UpdateUser
+from scr.auth.utils import decode_jwt
+from scr.users.crud import CRUD
+from scr.core.config import engine
+from scr.users.schemas import UserSchema, UserInfo, UpdateUser
 from http import HTTPStatus
-from typing import List, Union
-from core.models import User
-from core.models.role import State
+from typing import List
+from scr.core.models.role import State
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 import jwt
 from fastapi import Query
 from fastapi import HTTPException
@@ -20,7 +17,7 @@ db = CRUD()
 router = APIRouter(prefix="/user", tags=["Users"])
 
 
-@router.get("/my/", response_model=List[UserSchema])
+@router.get("/all_users_free/", response_model=List[UserSchema])
 async def get_all_users():
 
     # получаю всех пользователей из базы данных
@@ -53,7 +50,6 @@ async def user_info(access_token: str) -> UserInfo:
         return user_info_instance
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-
 
 
 @router.patch("/me/", response_model=UpdateUser)
@@ -184,7 +180,7 @@ async def get_users_for_parameters(
     limit: int = Query(30),
     filter_by_name: str = Query(None),
     sort_by: str = Query(None),
-    order_by: str = Query(None, regex="^(asc|desc)$"),
+    order_by: str = Query(None, pattern="^(asc|desc)$"),
 ):
 
     try:

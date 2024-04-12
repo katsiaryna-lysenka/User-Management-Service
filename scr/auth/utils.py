@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 
 import jwt
 import bcrypt
-from core.config import settings
+from scr.core.config import settings
 
 
 def encode_jwt(

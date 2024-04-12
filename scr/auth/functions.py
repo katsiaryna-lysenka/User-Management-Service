@@ -1,5 +1,3 @@
-import hashlib
-
 import aio_pika
 
 import json
@@ -9,16 +7,14 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.helpers import (
+from scr.auth.helpers import (
     create_refresh_token,
     create_reset_token,
-    REFRESH_TOKEN_TYPE,
-    TOKEN_TYPE_FIELD,
     create_access_token,
 )
-from auth.utils import decode_jwt
-from core.config import settings, get_db
-from core.models import User
+from scr.auth.utils import decode_jwt
+from scr.core.config import settings, get_db
+from scr.core.models import User
 from jwt import InvalidTokenError
 
 from redis.exceptions import RedisError
@@ -83,7 +79,7 @@ async def perform_reset_password(email: str, session: AsyncSession = Depends(get
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    reset_token = create_reset_token(user)  # Передаем весь объект пользователя
+    reset_token = create_reset_token(user)  # передаю весь объект пользователя
 
     try:
         await publish_reset_email_message(email, reset_token)

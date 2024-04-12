@@ -1,10 +1,9 @@
 from datetime import timedelta
 
-from auth import utils as auth_utils
-from core.config import settings
-from core.models import user
+from scr.auth import utils as auth_utils
+from scr.core.config import settings
 
-from users.schemas import UserSchema
+from scr.users.schemas import UserSchema
 
 
 TOKEN_TYPE_FIELD = "type"

@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 
 import uvicorn
-from users.views import router as users_router
+from scr.users.views import router as users_router
 from healthcheck.views import router as healthcheck_router
 
-from auth.views import router
+from scr.auth.views import router
 
 
 app = FastAPI()

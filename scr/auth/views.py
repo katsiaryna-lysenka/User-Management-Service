@@ -1,29 +1,21 @@
 from datetime import datetime
 from http import HTTPStatus
 
-import redis
 from pydantic import EmailStr
-from redis import Redis
 from starlette.responses import JSONResponse
 
-import auth
-from auth.functions import perform_reset_password, get_refreshed_token
-from auth.utils import encode_jwt, hash_password, validate_password
-from users.schemas import TokenInfo
+from scr.auth.functions import perform_reset_password, get_refreshed_token
+from scr.auth.utils import encode_jwt, hash_password, validate_password
+from scr.users.schemas import TokenInfo
 from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
-from auth.helpers import create_access_token, create_refresh_token
-from core.config import engine, settings, get_db
-from core.models import User
-from users.crud import CRUD
-from users.schemas import CreateUser
-import aio_pika
-
-import json
-
+from scr.core.config import engine, get_db
+from scr.core.models import User
+from scr.users.crud import CRUD
+from scr.users.schemas import CreateUser
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 session = async_sessionmaker(bind=engine, expire_on_commit=False)
@@ -34,10 +26,6 @@ crud = CRUD()
 
 @router.post("/signup", status_code=HTTPStatus.CREATED, response_model=dict)
 async def create_user(user_data: CreateUser) -> dict:
-
-    # устанавливаю значения по умолчанию для created_at и modified_at
-    user_data.created_at = datetime.now()
-    user_data.modified_at = datetime.now()
 
     # хеширую пароль
     hashed_password = hash_password(user_data.password)
@@ -56,8 +44,8 @@ async def create_user(user_data: CreateUser) -> dict:
         role=user_data.role,
         group=user_data.group,
         is_blocked=user_data.is_blocked,
-        created_at=user_data.created_at,
-        modified_at=user_data.modified_at,
+        created_at=datetime.now(),  # Установка значения created_at при создании User
+        modified_at=datetime.now(),
     )
 
     user = await db.add(session, new_user)
@@ -90,7 +78,10 @@ async def return_tokens(
     try:
         # проверю наличие информации для входа
         if not any([username, email, phone_number]):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Login information missing")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Login information missing",
+            )
 
         # полученю пользователя из базы данных
         user = None
@@ -103,14 +94,18 @@ async def return_tokens(
 
         # проверяю наличие пользователя
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            )
 
         # хеширую пароля
         hashed_password = hash_password(password)
 
-        # провеяю пароля
-        if not validate_password(password, hashed_password):  # убрано await здесь
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+        # провеяю пароль
+        if not validate_password(password, hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
+            )
 
         # созданю токены доступа и обновления
         access_token = encode_jwt({"user_id": str(user.id)})
@@ -125,7 +120,9 @@ async def return_tokens(
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 async def get_access_token(username: str, password: str) -> bytes:

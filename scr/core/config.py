@@ -1,9 +1,11 @@
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, ClassVar
 
 from pydantic_settings import BaseSettings
 from pydantic import BaseModel
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_session
 from sqlalchemy.ext.declarative import declarative_base
 import jwt
@@ -51,7 +53,14 @@ SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
 )
 
+metadata = MetaData()
 
 Base = declarative_base()
 settings = Settings()
 auth_jwt = AuthJWT()
+
+DB_HOST_TEST = os.environ.get("DB_HOST_TEST")
+DB_PORT_TEST = os.environ.get("DB_PORT_TEST")
+DB_NAME_TEST = os.environ.get("DB_NAME_TEST")
+DB_USER_TEST = os.environ.get("DB_USER_TEST")
+DB_PASS_TEST = os.environ.get("DB_PASS_TEST")

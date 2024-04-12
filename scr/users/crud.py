@@ -1,13 +1,11 @@
 from typing import List
 
 from fastapi import HTTPException
-from fastapi.security import HTTPBasicCredentials
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from core.models import User
+from scr.core.models import User
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, async_session
 from sqlalchemy import select, or_
-from core.config import settings
-from users.schemas import UpdateUser
+from scr.core.config import settings
 
 db_url = settings.db_url
 
@@ -42,9 +40,8 @@ class CRUD:
 
             return result.scalars().one()
 
-
     async def update(
-            self, async_session: async_sessionmaker[AsyncSession], user_id, data
+        self, async_session: async_sessionmaker[AsyncSession], user_id, data
     ):
         async with async_session() as session:
             statement = select(User).filter(User.id == user_id)
@@ -66,7 +63,6 @@ class CRUD:
             await session.commit()
 
             return user
-
 
     async def delete(
         self, async_session: async_sessionmaker[AsyncSession], user_id: str

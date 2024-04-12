@@ -14,6 +14,13 @@ services:
       - rabbitmq
     environment:
       - REDIS_HOST=redis_manager_field
+      - DB_HOST_TEST=postgresql
+      - DB_PORT_TEST=5432
+      - DB_NAME_TEST=postgres
+      - DB_USER_TEST=postgres
+      - DB_PASS_TEST=12345
+    volumes:
+      - .env:/app/.env
     networks:
       - backend
 

@@ -10,7 +10,8 @@ RUN apt-get update &&  \
     apt-get install -y --no-install-recommends gcc && \
     pip install poetry && \
     poetry config virtualenvs.create false && \
-    poetry install --no-root --only main
+    poetry install --no-root --only main && \
+    poetry add pytest-asyncio
 
 FROM builder
 
