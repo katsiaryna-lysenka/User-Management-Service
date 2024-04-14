@@ -2,10 +2,10 @@ from typing import List
 
 from fastapi import HTTPException
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from scr.core.models import User
+from src.core.models import User
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, async_session
 from sqlalchemy import select, or_
-from scr.core.config import settings
+from src.core.config import settings
 
 db_url = settings.db_url
 

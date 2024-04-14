@@ -7,14 +7,14 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from scr.auth.helpers import (
+from src.auth.helpers import (
     create_refresh_token,
     create_reset_token,
     create_access_token,
 )
-from scr.auth.utils import decode_jwt
-from scr.core.config import settings, get_db
-from scr.core.models import User
+from src.auth.utils import decode_jwt
+from src.core.config import settings, get_db
+from src.core.models import User
 from jwt import InvalidTokenError
 
 from redis.exceptions import RedisError

@@ -1,10 +1,10 @@
-from scr.auth.utils import decode_jwt
-from scr.users.crud import CRUD
-from scr.core.config import engine
-from scr.users.schemas import UserSchema, UserInfo, UpdateUser
+from src.auth.utils import decode_jwt
+from src.users.crud import CRUD
+from src.core.config import engine
+from src.users.schemas import UserSchema, UserInfo, UpdateUser
 from http import HTTPStatus
 from typing import List
-from scr.core.models.role import State
+from src.core.models.role import State
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from fastapi import APIRouter
 import jwt

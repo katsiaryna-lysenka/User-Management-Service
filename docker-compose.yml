@@ -14,11 +14,6 @@ services:
       - rabbitmq
     environment:
       - REDIS_HOST=redis_manager_field
-      - DB_HOST_TEST=postgresql
-      - DB_PORT_TEST=5432
-      - DB_NAME_TEST=postgres
-      - DB_USER_TEST=postgres
-      - DB_PASS_TEST=12345
     volumes:
       - .env:/app/.env
     networks:
@@ -34,6 +29,15 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=12345
       - POSTGRES_DB=postgres
+    networks:
+      - backend
+
+  postgresql_test:
+    image: postgres:latest
+    restart: always
+    container_name: postgresql_test-container
+    ports:
+      - "5433:5432"  # Этот порт для тестовой базы данных
     networks:
       - backend
 

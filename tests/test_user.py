@@ -1,50 +1,77 @@
+import httpx
 import pytest
-from httpx import AsyncClient
+import asyncio
 
-from main import app
-from scr.auth.utils import encode_jwt
-from scr.core.models.role import State
-from scr.users.schemas import UserInfo
+from src.auth.utils import encode_jwt
+from src.auth.views import session
+from src.core.models import User
+from src.users.schemas import UserInfo
+from src.users.crud import CRUD
 
-from tests.conftest import async_session_maker
-from scr.users.crud import CRUD
-from sqlalchemy import insert, select
 
 db = CRUD()
 
 
 @pytest.fixture(scope="session")
 def access_token():
-    payload = {"id": "f9e17b10-670d-4060-81f9-39815d519430"}
-    access_token = encode_jwt(payload)
-    return access_token
+    def _access_token(user_id):
+        return encode_jwt({"user_id": str(user_id)})
 
-
-def test_example(access_token):
-    # В этом примере мы просто печатаем токен
-    print(access_token)
+    return _access_token
 
 
 @pytest.fixture(scope="module")
-async def client():
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        yield client
+async def test_user():
+    # Создаем нового пользователя в базе данных
+    user_data = {
+        "id": "30012843-1d0f-4ee0-b17f-a99f70e0aeec",
+        "name": "vvv",
+        "surname": "vvv",
+        "username": "vvv",
+        "password": "111",
+        "phone_number": "111",
+        "email": "vvv@example.com",
+        "role": "admin",
+        "group": "Cat",
+        "is_blocked": False,
+    }
+    user = User(**user_data)
+    print("user:", user)
+    await db.add(session, user)
+    print("user:", user)
+
+    # Выводим список всех пользователей для проверки
+    users = await db.get_all(session)
+    print("All users:", users)
+
+    return user
 
 
 @pytest.mark.asyncio
-async def test_user_info(client, access_token):
-    async with client:
-        response = await client.request(
-            "GET", "/auth/me/", headers={"Authorization": f"Bearer {access_token}"}
-        )
+async def test_user_info(access_token, test_user):
+    user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
+    token = access_token(user_id)
+    print("Access token:", token)  # Добавляем вывод токена
+    base_url = "http://0.0.0.0:5000"
+    endpoint = "/user/me/"
+    headers = {"accept": "application/json"}
+    params = {"access_token": token}
+    url = base_url + endpoint
+    print("Request URL:", url)  # Добавляем вывод URL-адреса запроса
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.get(url, headers=headers, params=params)
+        print("Response:", response.text)  # Добавляем вывод ответа
+
         assert response.status_code == 200
-
-        # Проверяем, что в ответе содержится корректная информация о пользователе
-        user_info = response.json()
-        assert "id" in user_info
-        assert "username" in user_info
-        assert "email" in user_info
-
+        # Проверяем наличие данных в ответе сервера
+        assert "id" in response.json()
+        assert "name" in response.json()
+        assert "surname" in response.json()
+        assert "username" in response.json()
+        assert "email" in response.json()
+        assert "phone_number" in response.json()
+        assert "role" in response.json()
+        assert "group" in response.json()
         # Проверяем, что полученная информация соответствует модели UserInfo
-        user_info_instance = UserInfo(**user_info)
+        user_info_instance = UserInfo(**response.json())
         assert isinstance(user_info_instance, UserInfo)

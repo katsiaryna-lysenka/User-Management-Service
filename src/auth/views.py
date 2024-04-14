@@ -4,18 +4,18 @@ from http import HTTPStatus
 from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
-from scr.auth.functions import perform_reset_password, get_refreshed_token
-from scr.auth.utils import encode_jwt, hash_password, validate_password
-from scr.users.schemas import TokenInfo
+from src.auth.functions import perform_reset_password, get_refreshed_token
+from src.auth.utils import encode_jwt, hash_password, validate_password
+from src.users.schemas import TokenInfo
 from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
-from scr.core.config import engine, get_db
-from scr.core.models import User
-from scr.users.crud import CRUD
-from scr.users.schemas import CreateUser
+from src.core.config import engine, get_db
+from src.core.models import User
+from src.users.crud import CRUD
+from src.users.schemas import CreateUser
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 session = async_sessionmaker(bind=engine, expire_on_commit=False)
