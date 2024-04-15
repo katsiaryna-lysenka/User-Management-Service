@@ -1,58 +1,14 @@
+from http import HTTPStatus
+from typing import Any
+from .conftest import access_token
 import httpx
 import pytest
-from sqlalchemy.ext.asyncio import async_session, async_sessionmaker, AsyncSession
 
-from src.auth.utils import encode_jwt, decode_jwt
-from src.auth.views import session
-from src.core.config import metadata
-from src.core.models import User
-from src.database.create_db import engine
 from src.users.schemas import UserInfo
 from src.users.crud import CRUD
 
 
 db = CRUD()
-
-
-async def create_database():
-    async with engine.begin() as conn:
-        await conn.run_sync(metadata.drop_all)
-        await conn.run_sync(metadata.create_all)
-
-
-@pytest.fixture(scope="session")
-def access_token():
-    def _access_token(user_id):
-        return encode_jwt({"user_id": str(user_id)})
-
-    return _access_token
-
-
-@pytest.fixture(scope="module")
-async def test_user():
-    # Создаем нового пользователя в базе данных
-    user_data = {
-        "id": "30012843-1d0f-4ee0-b17f-a99f70e0aeec",
-        "name": "vvv",
-        "surname": "vvv",
-        "username": "vvv",
-        "password": "111",
-        "phone_number": "111",
-        "email": "vvv@example.com",
-        "role": "admin",
-        "group": "Cat",
-        "is_blocked": False,
-    }
-    user = User(**user_data)
-    print("user:", user)
-    await db.add(session, user)
-    print("user:", user)
-
-    # Выводим список всех пользователей для проверки
-    users = await db.get_all(session)
-    print("All users:", users)
-
-    return user
 
 
 @pytest.mark.asyncio
@@ -88,7 +44,7 @@ async def test_user_info(access_token, test_user):
 
 
 @pytest.mark.asyncio
-async def test_update_user(test_user):
+async def test_update_user(test_user: Any, access_token):
     # Создаем тестовые данные для обновления пользователя
     updated_user_data = {
         "name": "kkk",
@@ -102,22 +58,222 @@ async def test_update_user(test_user):
         "is_blocked": False,
     }
 
-    # Создаем базу данных
-    await create_database()
-
-    # Выполняем ручную аутентификацию пользователя
+    # Получаем access token
     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
-    token = encode_jwt({"user_id": user_id})
+    token = access_token(user_id)
 
-    # Вызываем эндпоинт для обновления пользователя с использованием предварительно созданного пользователя и токена доступа
-    response = await db.update(async_sessionmaker[AsyncSession], user_id, updated_user_data)
+    # Выполняем запрос обновления пользователя
+    base_url = "http://0.0.0.0:5000"
+    endpoint = "/user/me/"
+    url = base_url + endpoint + "?access_token=" + token
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.patch(url, json=updated_user_data, headers=headers)
+    print("Response:", response.text)  # Добавляем вывод ответа
+
+    # Проверяем успешность обновления пользователя
+    assert response.status_code == 200
 
     # Проверяем, что ответ содержит ожидаемые данные пользователя
-    assert response.name == updated_user_data["name"]
-    assert response.surname == updated_user_data["surname"]
-    assert response.username == updated_user_data["username"]
-    assert response.phone_number == updated_user_data["phone_number"]
-    assert response.email == updated_user_data["email"]
-    assert response.role == updated_user_data["role"]
-    assert response.group == updated_user_data["group"]
-    assert response.is_blocked == updated_user_data["is_blocked"]
+    response_data = response.json()
+    assert response_data["name"] == updated_user_data["name"]
+    assert response_data["surname"] == updated_user_data["surname"]
+    assert response_data["username"] == updated_user_data["username"]
+    assert response_data["phone_number"] == updated_user_data["phone_number"]
+    assert response_data["email"] == updated_user_data["email"]
+    assert response_data["role"] == updated_user_data["role"]
+    assert response_data["group"] == updated_user_data["group"]
+    assert response_data["is_blocked"] == updated_user_data["is_blocked"]
+
+
+@pytest.mark.asyncio
+async def test_delete_user(access_token, test_user):
+    # Получаем access token
+    user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
+    token = access_token(user_id)
+
+    # Выполняем запрос на удаление пользователя
+    base_url = "http://0.0.0.0:5000"
+    endpoint = "/user/me/"
+    url = base_url + endpoint + "?access_token=" + token
+    headers = {"accept": "*/*"}
+
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.delete(url, headers=headers)
+    print("Response:", response.text)  # Добавляем вывод ответа
+
+    # Проверяем успешность удаления пользователя
+    assert response.status_code == HTTPStatus.NO_CONTENT
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_id(access_token, second_test_user, third_test_user: Any):
+    # Получаем access token
+    user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"
+    token = access_token(user_id)
+
+    # Выполняем запрос на получение информации о пользователе
+    base_url = "http://0.0.0.0:5000"
+    endpoint = f"/user/{third_test_user.id}/"
+    url = f"{base_url}{endpoint}?access_token={token}"
+    headers = {"accept": "application/json"}
+    print(f"other_test_user.id = {third_test_user.id}")
+
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.get(url, headers=headers)
+    print("Response:", response.text)
+
+    # Проверяем успешность получения информации о пользователе
+    assert response.status_code == HTTPStatus.OK
+
+    # Проверяем соответствие полученных данных модели UserInfo
+    response_data = response.json()
+    assert response_data["id"] == str(third_test_user.id)
+    assert response_data["name"] == third_test_user.name
+    assert response_data["surname"] == third_test_user.surname
+    assert response_data["username"] == third_test_user.username
+    assert response_data["phone_number"] == third_test_user.phone_number
+    assert response_data["email"] == third_test_user.email
+    assert response_data["role"] == third_test_user.role
+    assert response_data["group"] == third_test_user.group
+
+
+@pytest.mark.asyncio
+async def test_get_second_user_by_id(
+    access_token, third_test_user, second_test_user: Any
+):
+    # Получаем access token
+    user_id = "e39f3f3c-39d3-4914-875f-7301f5e4c791"
+    token = access_token(user_id)
+
+    # Выполняем запрос на получение информации о пользователе
+    base_url = "http://0.0.0.0:5000"
+    endpoint = f"/user/{second_test_user.id}/"
+    url = f"{base_url}{endpoint}?access_token={token}"
+    headers = {"accept": "application/json"}
+    print(f"other_test_user.id = {second_test_user.id}")
+
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.get(url, headers=headers)
+    print("Response:", response.text)
+
+    # Проверяем успешность получения информации о пользователе
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_update_user_for_admin(
+    access_token, second_test_user, third_test_user: Any
+):
+    # Получаем access token
+    user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"
+    token = access_token(user_id)
+
+    # Подготовка данных для обновления
+    updated_data = {
+        "name": "katya",
+        "surname": "lekatya",
+        "username": "katya.a.a",
+        "password": "888",
+        "phone_number": "336666666",
+        "email": "katya@example.com",
+        "role": "moderator",
+        "group": "Dog",
+        "is_blocked": False,
+    }
+
+    # Выполняем запрос на обновление данных пользователя
+    base_url = "http://0.0.0.0:5000"
+    endpoint = f"/user/{third_test_user.id}/"
+    url = f"{base_url}{endpoint}?access_token={token}"
+    headers = {"accept": "application/json"}
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.patch(url, json=updated_data, headers=headers)
+
+    # Проверяем успешность обновления данных пользователя
+    assert response.status_code == HTTPStatus.OK
+    print("Response data:", response.text)
+
+    # Проверяем, что ответ содержит обновленные данные пользователя
+    response_data = response.json()
+    assert response_data["name"] == updated_data["name"]
+    assert response_data["surname"] == updated_data["surname"]
+    assert response_data["username"] == updated_data["username"]
+    assert response_data["password"] == updated_data["password"]
+    assert response_data["phone_number"] == updated_data["phone_number"]
+    assert response_data["email"] == updated_data["email"]
+    assert response_data["role"] == updated_data["role"]
+    assert response_data["group"] == updated_data["group"]
+    assert response_data["is_blocked"] == updated_data["is_blocked"]
+
+    # Проверяем, что modified_at обновлено
+    assert "modified_at" in response_data
+    assert response_data["modified_at"] != third_test_user.modified_at
+
+
+@pytest.mark.asyncio
+async def test_update_second_user_for_admin(
+    access_token, third_test_user, second_test_user: Any
+):
+    # Получаем access token
+    user_id = "e39f3f3c-39d3-4914-875f-7301f5e4c791"
+    token = access_token(user_id)
+
+    # Подготовка данных для обновления
+    updated_data = {
+        "name": "katya",
+        "surname": "lekatya",
+        "username": "katya.a.a",
+        "password": "888",
+        "phone_number": "336666666",
+        "email": "katya@example.com",
+        "role": "moderator",
+        "group": "Dog",
+        "is_blocked": False,
+    }
+
+    # Выполняем запрос на обновление данных пользователя
+    base_url = "http://0.0.0.0:5000"
+    endpoint = f"/user/{second_test_user.id}/"
+    url = f"{base_url}{endpoint}?access_token={token}"
+    headers = {"accept": "application/json"}
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.patch(url, json=updated_data, headers=headers)
+
+    # Проверяем успешность обновления данных пользователя
+    assert response.status_code == 403
+
+
+# @pytest.mark.asyncio
+# async def test_get_users_for_parameters(access_token, test_user, fourth_test_user):
+#     # Получаем access token
+#     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"  # ID пользователя с ролью admin
+#     token = access_token(user_id)
+#
+#     # Подготовка данных запроса
+#     query_params = {
+#         "page": 1,
+#         "limit": 30,
+#         "filter_by_name": "valery",
+#         "sort_by": "phone_number",
+#         "order_by": "asc",
+#     }
+#     base_url = "http://0.0.0.0:5000"
+#     endpoint = "/user/users/"
+#     headers = {"accept": "application/json", "Authorization": f"Bearer {token}"}
+#
+#     # Выполняем запрос
+#     async with httpx.AsyncClient(http2=True) as client:
+#         response = await client.get(
+#             base_url + endpoint, params=query_params, headers=headers
+#         )
+#
+#     # Проверяем успешность запроса и ожидаемый статус код
+#     assert response.status_code == 200
+#
+#     # Проверяем, что ответ не пустой
+#     assert response.json()

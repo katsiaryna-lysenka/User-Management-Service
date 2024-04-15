@@ -1,14 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from starlette.config import Config
 from pydantic import BaseModel
 from pathlib import Path
 from sqlalchemy import MetaData
-from sqlalchemy.ext.declarative import declarative_base
+
 
 # Загрузка переменных окружения из файла .env
-config = Config('.env')
+config = Config(".env")
 
 # Определение путей к приватному и публичному ключам JWT
 BASE_DIR = Path(__file__).parent.parent
@@ -63,4 +64,3 @@ async def get_db():
     finally:
         if db is not None:
             await db.close()
-

@@ -38,6 +38,8 @@ services:
     container_name: postgresql_test-container
     ports:
       - "5433:5432"  # Этот порт для тестовой базы данных
+    environment:
+      POSTGRES_PASSWORD: 12345
     networks:
       - backend
 

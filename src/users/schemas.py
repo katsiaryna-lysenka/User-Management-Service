@@ -2,7 +2,7 @@ from pydantic import ConfigDict
 
 from pydantic import BaseModel, EmailStr, constr
 from datetime import datetime
-from typing import Optional
+from typing import Optional, ClassVar
 from uuid import uuid4
 
 
@@ -20,13 +20,8 @@ class CreateUser(BaseModel):
     created_at: Optional[datetime] = None
     modified_at: Optional[datetime] = None
 
-    class Config:
-        # добавляю параметр `allow_mutation=False`, чтобы предотвратить мутацию объекта
-        allow_mutation = False
-
 
 class UserSchema(BaseModel):
-    model_config = ConfigDict(strict=True)
     username: str
     password: bytes
     email: EmailStr | None = None
@@ -34,8 +29,7 @@ class UserSchema(BaseModel):
 
 
 class Partial(BaseModel):
-    class Config:
-        extra = "ignore"
+    extra: ClassVar[str] = "ignore"
 
 
 class LoginInput(Partial):
@@ -43,9 +37,6 @@ class LoginInput(Partial):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
     password: str
-
-    class Config:
-        orm_mode = True
 
 
 class UserInfo(BaseModel):
