@@ -159,3 +159,24 @@ async def fourth_test_user():
     print("All users:", users)
 
     return user
+
+
+@pytest.fixture(scope="module")
+async def fifth_test_user():
+    # Создаем нового пользователя в базе данных
+    user_data = {
+        "id": "c8285014-a740-4d47-b3b1-42a5aeffb5f1",
+        "name": "ann",
+        "surname": "none",
+        "username": "ann.n.n",
+        "password": "444",
+        "phone_number": "298887766",
+        "email": "---",
+        "role": "moderator",
+        "group": "Cat",
+        "is_blocked": False,
+    }
+    user = User(**user_data)
+    await db.add(session, user)
+
+    return user

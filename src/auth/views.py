@@ -1,6 +1,7 @@
 from datetime import datetime
 from http import HTTPStatus
 
+from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
@@ -196,6 +197,12 @@ async def refresh_token(
 async def reset_password(
     email: str = Header(...), session: AsyncSession = Depends(get_db)
 ):
+
+    try:
+        validate_email(email)  # Проверка валидности email
+    except EmailNotValidError:
+        raise HTTPException(status_code=400, detail="Invalid email format")
+
     try:
         return await perform_reset_password(email, session)
     except HTTPException as e:

@@ -75,11 +75,13 @@ async def perform_reset_password(email: str, session: AsyncSession = Depends(get
     query = select(User).filter(User.email == email)
     user = await session.execute(query)
     user = user.scalar_one_or_none()
+    print(f"user = {user}")
 
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
     reset_token = create_reset_token(user)  # передаю весь объект пользователя
+    print(f"reset_token = {reset_token}")
 
     try:
         await publish_reset_email_message(email, reset_token)
@@ -92,8 +94,9 @@ async def perform_reset_password(email: str, session: AsyncSession = Depends(get
 async def publish_reset_email_message(email: str, reset_token: str):
     try:
         connection = await aio_pika.connect_robust(
-            f"amqp://guest:guest@{settings.RABBITMQ_HOST}/"
+            f"amqp://guest:guest@{settings.rabbitmq_host}/"
         )
+        print("I have a connect")
     except aio_pika.exceptions.AMQPConnectionError as e:
         error_message = f"Error connecting to RabbitMQ: {str(e)}"
         print(error_message)

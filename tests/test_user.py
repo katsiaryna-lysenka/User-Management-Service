@@ -248,32 +248,32 @@ async def test_update_second_user_for_admin(
     assert response.status_code == 403
 
 
-# @pytest.mark.asyncio
-# async def test_get_users_for_parameters(access_token, test_user, fourth_test_user):
-#     # Получаем access token
-#     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"  # ID пользователя с ролью admin
-#     token = access_token(user_id)
-#
-#     # Подготовка данных запроса
-#     query_params = {
-#         "page": 1,
-#         "limit": 30,
-#         "filter_by_name": "valery",
-#         "sort_by": "phone_number",
-#         "order_by": "asc",
-#     }
-#     base_url = "http://0.0.0.0:5000"
-#     endpoint = "/user/users/"
-#     headers = {"accept": "application/json", "Authorization": f"Bearer {token}"}
-#
-#     # Выполняем запрос
-#     async with httpx.AsyncClient(http2=True) as client:
-#         response = await client.get(
-#             base_url + endpoint, params=query_params, headers=headers
-#         )
-#
-#     # Проверяем успешность запроса и ожидаемый статус код
-#     assert response.status_code == 200
-#
-#     # Проверяем, что ответ не пустой
-#     assert response.json()
+@pytest.mark.asyncio
+async def test_get_users_for_parameters(access_token, second_test_user, fourth_test_user):
+    # Получаем access token
+    user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"  # ID пользователя с ролью admin
+    token = access_token(user_id)
+
+    # Подготовка данных запроса
+    query_params = {
+        "page": 1,
+        "limit": 30,
+        "filter_by_name": "valery",
+        "sort_by": "phone_number",
+        "order_by": "asc",
+    }
+    base_url = "http://0.0.0.0:5000"
+    endpoint = "/user/users/"
+    headers = {"accept": "application/json", "Authorization": f"Bearer {token}"}
+
+    # Выполняем запрос
+    async with httpx.AsyncClient(http2=True) as client:
+        response = await client.get(
+            base_url + endpoint, params=query_params, headers=headers
+        )
+
+    # Проверяем успешность запроса и ожидаемый статус код
+    assert response.status_code == 200
+
+    # Проверяем, что ответ не пустой
+    assert response.json()
