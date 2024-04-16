@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Optional, ClassVar
 from uuid import uuid4
 
+from src.core.models import Role
+
 
 class CreateUser(BaseModel):
     id: str = str(uuid4())  # генерирую значения поля `id` при создании объекта
@@ -14,8 +16,9 @@ class CreateUser(BaseModel):
     password: str
     phone_number: str
     email: EmailStr
-    role: str
+    role: Role
     group: str
+    image_path: Optional[str] = None
     is_blocked: bool = False
     created_at: Optional[datetime] = None
     modified_at: Optional[datetime] = None

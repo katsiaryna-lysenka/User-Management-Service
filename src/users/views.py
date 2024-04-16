@@ -1,10 +1,12 @@
 from src.auth.utils import decode_jwt
+from src.core.models import Role
 from src.users.crud import CRUD
 from src.core.config import engine
 from src.users.schemas import UserSchema, UserInfo, UpdateUser
 from http import HTTPStatus
 from typing import List
-from src.core.models.role import State
+
+# from src.core.models.role import State
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from fastapi import APIRouter
 import jwt
@@ -62,6 +64,13 @@ async def update_user(data: UpdateUser, access_token: str) -> UpdateUser:
         if user_id is None:
             raise HTTPException(status_code=401, detail="User ID not found in token")
 
+        # Проверяем, является ли значение role допустимым
+        valid_roles = [role.value for role in Role]
+        if data.role not in valid_roles:
+            raise HTTPException(
+                status_code=400, detail="Invalid value for 'role' field"
+            )
+
         # обновление информации о пользователе
         updated_user = await db.update(session, user_id, data)
 
@@ -108,7 +117,7 @@ async def get_user_by_id(access_token: str, user_id: str) -> UserInfo:
         user_role = user_info.get("role")
 
         # проверяю роль пользователя и выполняем соответствующие действия
-        if user_role == State.ADMIN.value:
+        if user_role == Role.ADMIN.value:
             # получаю информацию о пользователе по его ID
             user_info = await db.get_user_info_by_id(session, user_id)
             user_info["id"] = str(user_info["id"])
@@ -118,7 +127,7 @@ async def get_user_by_id(access_token: str, user_id: str) -> UserInfo:
 
             return user_info_instance
 
-        elif user_role == State.MODERATOR.value:
+        elif user_role == Role.MODERATOR.value:
             # получаю информацию о пользователе по его ID
             user_info = await db.get_user_info_by_id(session, user_id)
             if (
@@ -158,8 +167,15 @@ async def update_user_for_admin(
         user_role = user_info.get("role")
 
         # проверяю роль пользователя
-        if user_role != State.ADMIN.value:
+        if user_role != Role.ADMIN.value:
             raise HTTPException(status_code=403, detail="Insufficient access rights")
+
+        # Проверяем допустимость новой роли пользователя
+        valid_roles = [role.value for role in Role]
+        if data.role not in valid_roles:
+            raise HTTPException(
+                status_code=400, detail="Invalid value for 'role' field"
+            )
 
         # обновляю информацию о пользователе
         updated_user = await db.update(session, user_id, data)
@@ -194,7 +210,7 @@ async def get_users_for_parameters(
         # извлекаю роль пользователя из информации о пользователе
         user_role = user_info.get("role")
 
-        if user_role == State.ADMIN.value:
+        if user_role == Role.ADMIN.value:
             # получаем все группы пользователей
             all_groups = await db.get_all_groups(session)
 
@@ -210,7 +226,7 @@ async def get_users_for_parameters(
             )
             return users
 
-        elif user_role == State.MODERATOR.value:
+        elif user_role == Role.MODERATOR.value:
             # получаю group текущего пользователя
             user_group = user_info["group"]
 

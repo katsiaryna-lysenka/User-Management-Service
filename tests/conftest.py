@@ -180,3 +180,24 @@ async def fifth_test_user():
     await db.add(session, user)
 
     return user
+
+
+@pytest.fixture(scope="module")
+async def six_test_user():
+    # Создаем нового пользователя в базе данных
+    user_data = {
+        "id": "1af54f6d-376e-4c1b-aef4-c3d3b27745c6",
+        "name": "katya",
+        "surname": "lekatya",
+        "username": "katya.a.a",
+        "password": "888",
+        "phone_number": "336666666",
+        "email": "katya@example.com",
+        "role": "moderator",
+        "group": "Dog",
+        "is_blocked": False,
+    }
+    user = User(**user_data)
+    await db.add(session, user)
+
+    return user
