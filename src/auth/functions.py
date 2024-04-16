@@ -1,23 +1,128 @@
+from typing import Optional
+
 import aio_pika
 
 import json
 import redis
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Form
+from fastapi.security import HTTPBasicCredentials
+from pydantic import EmailStr
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.auth.helpers import (
     create_refresh_token,
     create_reset_token,
     create_access_token,
 )
-from src.auth.utils import decode_jwt
-from src.core.config import settings, get_db
+from src.auth.utils import decode_jwt, hash_password, validate_password, encode_jwt
+
+from src.core.config import settings, get_db, engine
 from src.core.models import User
 from jwt import InvalidTokenError
 
 from redis.exceptions import RedisError
+
+from src.users.crud import CRUD
+
+session = async_sessionmaker(bind=engine, expire_on_commit=False)
+crud = CRUD()
+
+
+async def generate_tokens(
+    username: str = Form(None),
+    email: EmailStr = Form(None),
+    phone_number: str = Form(None),
+    password: str = Form(...),
+) -> dict:
+    try:
+        # Проверяем, что обязательные параметры предоставлены
+        if not (username and password):
+            raise HTTPException(
+                status_code=400, detail="Username and password are required"
+            )
+
+        # Проверяем, что предоставлен хотя бы один из email или phone_number
+        if not (email or phone_number):
+            raise HTTPException(
+                status_code=400, detail="Either email or phone_number is required"
+            )
+
+        # Получаем пользователя из базы данных по username
+        user = await crud.get_by_login(session(), username)
+
+        # Проверяем наличие пользователя
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        # Хешируем пароль
+        hashed_password = hash_password(password)
+
+        # Проверяем пароль
+        if not validate_password(password, hashed_password):
+            raise HTTPException(status_code=401, detail="Incorrect password")
+
+        # Создаем токены доступа и обновления
+        access_token = encode_jwt({"user_id": str(user.id)})
+        refresh_token = encode_jwt(
+            {"user_id": str(user.id)},
+            expire_minutes=60,
+        )
+
+        # Возвращаем токены в формате словаря
+        return {"access_token": access_token, "refresh_token": refresh_token}
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def get_access_token(username: str, password: str) -> bytes:
+    try:
+        # получаю словарь с токенами доступа от функции generate_tokens
+        tokens = await generate_tokens(username=username, password=password)
+
+        # извлекаю токен доступа из словаря
+        access_token = tokens.get("access_token")
+
+        # если токен доступа не был получен, возникает ошибка
+        if not access_token:
+            raise HTTPException(
+                status_code=500, detail="Failed to generate access token"
+            )
+
+        # преобразую токен доступа в байтовый формат
+        access_token_bytes = access_token.encode()
+
+        return access_token_bytes
+    except HTTPException as e:
+        # если возникла ошибка при получении токена доступа, пробрасываю ее дальше
+        raise e
+
+
+async def get_refresh_token(username: str, password: str) -> bytes:
+    try:
+        # получаю словарь с токенами доступа от функции generate_tokens
+        tokens = await generate_tokens(username=username, password=password)
+
+        # извлекаю токен обновления из словаря
+        refresh_token = tokens.get("refresh_token")
+
+        # если токен обновления не был получен, возникает ошибка
+        if not refresh_token:
+            raise HTTPException(
+                status_code=500, detail="Failed to generate refresh token"
+            )
+
+        # преобразую токен обновления в байтовый формат
+        refresh_token_bytes = refresh_token.encode()
+
+        return refresh_token_bytes
+    except HTTPException as e:
+        # если возникла ошибка при получении токена обновления, пробрасываю ее дальше
+        raise e
 
 
 async def get_refreshed_token(token: str, session: AsyncSession = Depends(get_db)):
@@ -96,10 +201,8 @@ async def publish_reset_email_message(email: str, reset_token: str):
         connection = await aio_pika.connect_robust(
             f"amqp://guest:guest@{settings.rabbitmq_host}/"
         )
-        print("I have a connect")
     except aio_pika.exceptions.AMQPConnectionError as e:
         error_message = f"Error connecting to RabbitMQ: {str(e)}"
-        print(error_message)
         return
 
     async with connection:

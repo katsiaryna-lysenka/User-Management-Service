@@ -77,7 +77,7 @@ class CRUD:
 
     async def get_by_login(self, async_session: AsyncSession, login: str) -> User:
 
-        async with async_session() as session:
+        async with async_session as session:
             statement = select(User).filter(
                 (User.username == login)
                 | (User.email == login)

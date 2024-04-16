@@ -1,11 +1,16 @@
 from datetime import datetime
 from http import HTTPStatus
+from typing import Optional
 
 from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
-from src.auth.functions import perform_reset_password, get_refreshed_token
+from src.auth.functions import (
+    perform_reset_password,
+    get_refreshed_token,
+    generate_tokens,
+)
 from src.auth.utils import encode_jwt, hash_password, validate_password
 from src.users.schemas import TokenInfo
 from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
@@ -72,51 +77,21 @@ async def create_user(user_data: CreateUser) -> dict:
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
 async def return_tokens(
     username: str = Form(None),
-    email: EmailStr = Form(None),
-    phone_number: str = Form(None),
+    email: Optional[EmailStr] = Form(None),
+    phone_number: Optional[str] = Form(None),
     password: str = Form(...),
 ) -> dict:
     try:
-        # проверю наличие информации для входа
-        if not any([username, email, phone_number]):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Login information missing",
-            )
-
-        # полученю пользователя из базы данных
-        user = None
-        if username:
-            user = await crud.get_by_login(session, username)
-        elif email:
-            user = await crud.get_by_login(session, email)
-        elif phone_number:
-            user = await crud.get_by_login(session, phone_number)
-
-        # проверяю наличие пользователя
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-            )
-
-        # хеширую пароля
-        hashed_password = hash_password(password)
-
-        # провеяю пароль
-        if not validate_password(password, hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
-            )
-
-        # созданю токены доступа и обновления
-        access_token = encode_jwt({"user_id": str(user.id)})
-        refresh_token = encode_jwt(
-            {"user_id": str(user.id)},
-            expire_minutes=60,
+        # генерируем токены доступа и обновления
+        tokens = await generate_tokens(
+            username=username,
+            email=email if email != "" else None,
+            phone_number=phone_number if phone_number != "" else None,
+            password=password,
         )
 
-        # возвращеню токены в формате словаря
-        return {"access_token": access_token, "refresh_token": refresh_token}
+        # возвращаем токены в формате словаря
+        return tokens
 
     except HTTPException as e:
         raise e
@@ -124,62 +99,6 @@ async def return_tokens(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-
-
-async def get_access_token(username: str, password: str) -> bytes:
-    try:
-
-        # получаю словарь с токенами доступа от функции return_tokens
-        tokens = await return_tokens(
-            HTTPBasicCredentials(username=username, password=password)
-        )
-
-        # извлекаю токен доступа из словаря
-        access_token = tokens.get("access_token")
-
-        # если токен доступа не был получен, возникает ошибка
-        if not access_token:
-            raise HTTPException(
-                status_code=500, detail="Failed to generate access token"
-            )
-
-        # преобразую токен доступа в байтовый формат
-        access_token_bytes = access_token.encode()
-
-        return access_token_bytes
-    except HTTPException as e:
-
-        # если возникла ошибка при получении токена доступа, пробрасываю ее дальше
-        raise e
-
-
-async def get_refresh_token(username: str, password: str) -> bytes:
-    try:
-
-        # получаю словарь с токенами доступа от функции return_tokens
-        tokens = await return_tokens(
-            HTTPBasicCredentials(username=username, password=password)
-        )
-
-        # извлекаю токен доступа из словаря
-        refresh_token = tokens.get("refresh_token")
-
-        print(f"refresh_token = {refresh_token}")
-        # если токен доступа не был получен, возникает ошибка
-        if not refresh_token:
-            raise HTTPException(
-                status_code=500, detail="Failed to generate access token"
-            )
-
-        # преобразую токен доступа в байтовый формат
-        refresh_token_bytes = refresh_token.encode()
-
-        print(f"refresh_token_bytes = {refresh_token_bytes}")
-        return refresh_token_bytes
-    except HTTPException as e:
-
-        # если возникла ошибка при получении токена доступа, пробрасываю ее дальше
-        raise e
 
 
 @router.post("/refresh-token", response_model=TokenInfo)
