@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 import uvicorn
 from src.users.views import router as users_router
-from healthcheck.views import router as healthcheck_router
+from src.healthcheck.views import router as healthcheck_router
 
 from src.auth.views import router
 
