@@ -1,0 +1,17 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - feature-dev
+  pull_request:
+    branches:
+      - feature-dev
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
