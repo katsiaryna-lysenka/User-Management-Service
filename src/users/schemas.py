@@ -9,19 +9,16 @@ from src.core.models import Role
 
 
 class CreateUser(BaseModel):
-    id: str = str(uuid4())  # генерирую значения поля `id` при создании объекта
     name: str
     surname: str
     username: constr(min_length=3, max_length=20)
-    password: str
+    password: constr(min_length=8, max_length=12)
     phone_number: str
     email: EmailStr
     role: Role
-    group: str
-    image_path: Optional[str] = None
-    is_blocked: bool = False
-    created_at: Optional[datetime] = None
-    modified_at: Optional[datetime] = None
+    group: str = "Cat"
+    image_s3_path: Optional[str] = None
+    # id, is_blocked, created_at и modified_at устанавливаю по умолчанию
 
 
 class UserSchema(BaseModel):
@@ -61,9 +58,8 @@ class UpdateUser(BaseModel):
     phone_number: str
     email: EmailStr
     role: str
-    group: str
+    group: str = "Cat"
     is_blocked: bool = False
-    modified_at: Optional[datetime] = None
 
 
 class TokenInfo(BaseModel):

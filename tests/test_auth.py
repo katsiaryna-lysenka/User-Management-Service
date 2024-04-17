@@ -11,7 +11,7 @@ async def test_create_user():
         "name": "nikol",
         "surname": "syt",
         "username": "nikol_l_l",
-        "password": "999",
+        "password": "99987777",
         "phone_number": "294444444",
         "email": "nikol@gmail.com",
         "role": "user",
@@ -40,7 +40,7 @@ async def test_create_second_user():
         "name": "nikol",
         "surname": "syt",
         "username": "nikol_l_l",
-        "password": "999",
+        "password": "99987777",
         "phone_number": "294444444",
         "email": "nikol@gmail.com",
         "role": "frog",
@@ -68,7 +68,7 @@ async def test_login_endpoint():
         "username": "nikol_l_l",
         "email": "nikol@gmail.com",
         "phone_number": "",
-        "password": "888",
+        "password": "99987777",
     }
 
     base_url = "http://0.0.0.0:5000"
@@ -119,9 +119,9 @@ async def test_second_login_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_refresh_token_endpoint(access_token):
+async def test_refresh_token_endpoint(access_token, six_test_user):
     # Получение токена из фикстуры
-    token = access_token("fb4e9d85-26cf-40ec-9660-c8fd7cfed8b9")
+    token = access_token("1af54f6d-376e-4c1b-aef4-c3d3b27745c6")
 
     # Параметры запроса
     base_url = "http://0.0.0.0:5000"

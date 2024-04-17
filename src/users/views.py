@@ -19,19 +19,6 @@ db = CRUD()
 router = APIRouter(prefix="/user", tags=["Users"])
 
 
-@router.get("/all_users_free/", response_model=List[UserSchema])
-async def get_all_users():
-
-    # получаю всех пользователей из базы данных
-    users = await db.get_all(session)
-
-    # пароли из строкового формата в байты
-    for user in users:
-        user.password = user.password.encode()
-
-    return users
-
-
 @router.get("/me/", response_model=UserInfo)
 async def user_info(access_token: str) -> UserInfo:
     try:

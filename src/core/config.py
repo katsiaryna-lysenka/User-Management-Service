@@ -1,4 +1,5 @@
 import os
+from typing import ClassVar
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -28,18 +29,21 @@ DB_PASS = os.getenv("DB_PASS")
 class AuthJWT(BaseModel):
     private_key_path: Path = private_key_path
     public_key_path: Path = public_key_path
-    algorithms: str = "RS256"
-    access_token_expire_minutes: int = 180
-    refresh_token_expire_days: int = 2
-    reset_token_expire_days: int = 1
+
+    algorithms: ClassVar[str] = os.getenv("ALGORITHMS")
+    access_token_expire_minutes: ClassVar[int] = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+    )
+    refresh_token_expire_days: ClassVar[int] = int(
+        os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")
+    )
+    reset_token_expire_days: ClassVar[int] = int(os.getenv("RESET_TOKEN_EXPIRE_DAYS"))
 
     class Config:
         from_attributes = True
 
 
-# Определение настроек приложения
 class Settings(BaseModel):
-    # db_url: str = f"postgresql+asyncpg://postgres:12345@postgresql:5432/postgres"
     db_url: str = (
         f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )

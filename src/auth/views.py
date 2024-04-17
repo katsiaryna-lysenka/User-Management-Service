@@ -40,7 +40,6 @@ async def create_user(user_data: CreateUser) -> dict:
     hashed_password_str = hashed_password.decode()
 
     new_user = User(
-        id=user_data.id,
         name=user_data.name,
         surname=user_data.surname,
         username=user_data.username,
@@ -49,9 +48,6 @@ async def create_user(user_data: CreateUser) -> dict:
         email=user_data.email,
         role=user_data.role,
         group=user_data.group,
-        is_blocked=user_data.is_blocked,
-        created_at=datetime.now(),  # Установка значения created_at при создании User
-        modified_at=datetime.now(),
     )
 
     user = await db.add(session, new_user)
@@ -67,8 +63,8 @@ async def create_user(user_data: CreateUser) -> dict:
         "role": user.role,
         "group": user.group,
         "is_blocked": user.is_blocked,
-        "created_at": user.created_at,
-        "modified_at": user.modified_at,
+        "created_at": datetime.now(),  # Установка значения created_at при создании User
+        "modified_at": datetime.now(),
     }
 
     return user_dict

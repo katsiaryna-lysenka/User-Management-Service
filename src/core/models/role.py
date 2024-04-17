@@ -8,18 +8,6 @@ from .base import Base
 from enum import Enum
 
 
-# class State(enum.Enum):
-#     USER = "user"
-#     ADMIN = "admin"
-#     MODERATOR = "moderator"
-#
-#
-# class Role(Base):
-#     __tablename__ = "roles"
-#
-#     state: Mapped[State]
-
-
 class Role(str, Enum):
     USER = "user"
     ADMIN = "admin"

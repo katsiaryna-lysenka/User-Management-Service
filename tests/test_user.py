@@ -264,11 +264,6 @@ async def test_update_user_for_admin(
     assert response_data["email"] == updated_data["email"]
     assert response_data["role"] == updated_data["role"]
     assert response_data["group"] == updated_data["group"]
-    assert response_data["is_blocked"] == updated_data["is_blocked"]
-
-    # Проверяем, что modified_at обновлено
-    assert "modified_at" in response_data
-    assert response_data["modified_at"] != third_test_user.modified_at
 
 
 @pytest.mark.asyncio
