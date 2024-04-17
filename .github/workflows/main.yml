@@ -24,3 +24,8 @@ jobs:
       - name: Copy secrets to .env
         run:
           echo "${{ secrets.ENV }}" > .env
+
+      - name: Format with Black
+        uses: rickstaa/action-black@v1
+        with:
+          black_args: "src"
