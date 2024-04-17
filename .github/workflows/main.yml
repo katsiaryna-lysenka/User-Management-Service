@@ -14,4 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Copy secrets to .env
+        run:
+          echo "${{ secrets.ENV }}" > .env
