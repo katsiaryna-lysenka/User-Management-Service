@@ -1,8 +1,6 @@
 import uuid
-from typing import Optional
-
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Column, Boolean, DateTime, UUID, func
+from sqlalchemy import String, Column, Boolean, DateTime, UUID, func, LargeBinary
 from .base import Base
 
 
@@ -16,10 +14,11 @@ class User(Base):
     surname: Mapped[String] = mapped_column(String)
     username: Mapped[String] = mapped_column(String)
     password: Mapped[String] = mapped_column(String)
-    phone_number: Mapped[String] = mapped_column(String(15))
-    email: Mapped[String] = mapped_column(String(100))
-    role: Mapped[String] = mapped_column(String(20))
-    group: Mapped[String] = mapped_column(String(50))
+    phone_number: Mapped[String] = mapped_column(String)
+    email: Mapped[String] = mapped_column(String)
+    role: Mapped[String] = mapped_column(String)
+    group: Mapped[String] = mapped_column(String)
+    # photo: Mapped[String] = mapped_column(String, nullable=True)
     is_blocked: Mapped[Boolean] = mapped_column(Boolean, default=False)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime,

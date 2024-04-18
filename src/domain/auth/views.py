@@ -13,7 +13,16 @@ from src.domain.auth.functions import (
 )
 from src.domain.auth.utils import hash_password
 from src.domain.users.schemas import TokenInfo
-from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
+from fastapi import (
+    APIRouter,
+    status,
+    HTTPException,
+    Depends,
+    Header,
+    Form,
+    UploadFile,
+    File,
+)
 from fastapi.security import HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
@@ -48,6 +57,7 @@ async def create_user(user_data: CreateUser) -> dict:
         email=user_data.email,
         role=user_data.role,
         group=user_data.group,
+        # photo=photo.file.read() if photo else None,
     )
 
     user = await db.add(session, new_user)
@@ -63,7 +73,7 @@ async def create_user(user_data: CreateUser) -> dict:
         "role": user.role,
         "group": user.group,
         "is_blocked": user.is_blocked,
-        "created_at": datetime.now(),  # Установка значения created_at при создании User
+        "created_at": datetime.now(),
         "modified_at": datetime.now(),
     }
 

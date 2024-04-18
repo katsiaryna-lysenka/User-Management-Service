@@ -13,8 +13,6 @@ class CreateUser(BaseModel):
     email: EmailStr
     role: Role
     group: str = "Cat"
-    image_s3_path: Optional[str] = None
-    # id, is_blocked, created_at и modified_at устанавливаю по умолчанию
 
 
 class UserSchema(BaseModel):
