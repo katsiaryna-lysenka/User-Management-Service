@@ -1,3 +1,4 @@
+from fastapi import UploadFile
 from pydantic import BaseModel, EmailStr, constr
 from typing import Optional, ClassVar
 
@@ -13,6 +14,7 @@ class CreateUser(BaseModel):
     email: EmailStr
     role: Role
     group: str = "Cat"
+    s3_file_path: Optional[str] = None
 
 
 class UserSchema(BaseModel):

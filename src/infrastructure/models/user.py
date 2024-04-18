@@ -18,7 +18,7 @@ class User(Base):
     email: Mapped[String] = mapped_column(String)
     role: Mapped[String] = mapped_column(String)
     group: Mapped[String] = mapped_column(String)
-    # photo: Mapped[String] = mapped_column(String, nullable=True)
+    s3_file_path: Mapped[String] = mapped_column(String, nullable=True)
     is_blocked: Mapped[Boolean] = mapped_column(Boolean, default=False)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime,

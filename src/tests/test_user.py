@@ -16,20 +16,19 @@ db = CRUD()
 async def test_user_info(access_token, test_user):
     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
     token = access_token(user_id)
-    print("Access token:", token)  # Добавляем вывод токена
+    print("Access token:", token)
     base_url = "http://0.0.0.0:5000"
     endpoint = "/user/me/"
     headers = {"accept": "application/json"}
     params = {"access_token": token}
     url = base_url + endpoint
-    print("Request URL:", url)  # Добавляем вывод URL-адреса запроса
+    print("Request URL:", url)
 
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.get(url, headers=headers, params=params)
-        print("Response:", response.text)  # Добавляем вывод ответа
+        print("Response:", response.text)
 
         assert response.status_code == 200
-        # Проверяем наличие данных в ответе сервера
         assert "id" in response.json()
         assert "name" in response.json()
         assert "surname" in response.json()
@@ -39,7 +38,6 @@ async def test_user_info(access_token, test_user):
         assert "role" in response.json()
         assert "group" in response.json()
 
-        # Проверяем, что полученная информация соответствует модели UserInfo
         user_info_instance = UserInfo(**response.json())
         assert isinstance(user_info_instance, UserInfo)
 
@@ -48,24 +46,24 @@ async def test_user_info(access_token, test_user):
 async def test_second_user_info(access_token, test_user):
     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aee"
     token = access_token(user_id)
-    print("Access token:", token)  # Добавляем вывод токена
+    print("Access token:", token)
     base_url = "http://0.0.0.0:5000"
     endpoint = "/user/me/"
     headers = {"accept": "application/json"}
     params = {"access_token": token}
     url = base_url + endpoint
-    print("Request URL:", url)  # Добавляем вывод URL-адреса запроса
+    print("Request URL:", url)
 
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.get(url, headers=headers, params=params)
-        print("Response:", response.text)  # Добавляем вывод ответа
+        print("Response:", response.text)
 
         assert response.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_update_user(test_user: Any, access_token):
-    # Создаем тестовые данные для обновления пользователя
+
     updated_user_data = {
         "name": "kkk",
         "surname": "kkk",
@@ -78,11 +76,9 @@ async def test_update_user(test_user: Any, access_token):
         "is_blocked": False,
     }
 
-    # Получаем access token
     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
     token = access_token(user_id)
 
-    # Выполняем запрос обновления пользователя
     base_url = "http://0.0.0.0:5000"
     endpoint = "/user/me/"
     url = base_url + endpoint + "?access_token=" + token
@@ -93,12 +89,10 @@ async def test_update_user(test_user: Any, access_token):
     }
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.patch(url, json=updated_user_data, headers=headers)
-    print("Response:", response.text)  # Добавляем вывод ответа
+    print("Response:", response.text)
 
-    # Проверяем успешность обновления пользователя
     assert response.status_code == 200
 
-    # Проверяем, что ответ содержит ожидаемые данные пользователя
     response_data = response.json()
     assert response_data["name"] == updated_user_data["name"]
     assert response_data["surname"] == updated_user_data["surname"]
@@ -112,7 +106,6 @@ async def test_update_user(test_user: Any, access_token):
 
 @pytest.mark.asyncio
 async def test_update_second_user(test_user: Any, access_token):
-    # Создаем тестовые данные для обновления пользователя
     updated_user_data = {
         "name": "kkk",
         "surname": "kkk",
@@ -125,11 +118,9 @@ async def test_update_second_user(test_user: Any, access_token):
         "is_blocked": False,
     }
 
-    # Получаем access token
     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
     token = access_token(user_id)
 
-    # Выполняем запрос обновления пользователя
     base_url = "http://0.0.0.0:5000"
     endpoint = "/user/me/"
     url = base_url + endpoint + "?access_token=" + token
@@ -140,19 +131,17 @@ async def test_update_second_user(test_user: Any, access_token):
     }
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.patch(url, json=updated_user_data, headers=headers)
-    print("Response:", response.text)  # Добавляем вывод ответа
+    print("Response:", response.text)
 
-    # Проверяем успешность обновления пользователя
     assert response.status_code == 400
 
 
 @pytest.mark.asyncio
 async def test_delete_user(access_token, test_user):
-    # Получаем access token
+
     user_id = "30012843-1d0f-4ee0-b17f-a99f70e0aeec"
     token = access_token(user_id)
 
-    # Выполняем запрос на удаление пользователя
     base_url = "http://0.0.0.0:5000"
     endpoint = "/user/me/"
     url = base_url + endpoint + "?access_token=" + token
@@ -160,19 +149,17 @@ async def test_delete_user(access_token, test_user):
 
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.delete(url, headers=headers)
-    print("Response:", response.text)  # Добавляем вывод ответа
+    print("Response:", response.text)
 
-    # Проверяем успешность удаления пользователя
     assert response.status_code == HTTPStatus.NO_CONTENT
 
 
 @pytest.mark.asyncio
 async def test_get_user_by_id(access_token, second_test_user, third_test_user: Any):
-    # Получаем access token
+
     user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"
     token = access_token(user_id)
 
-    # Выполняем запрос на получение информации о пользователе
     base_url = "http://0.0.0.0:5000"
     endpoint = f"/user/{third_test_user.id}/"
     url = f"{base_url}{endpoint}?access_token={token}"
@@ -183,10 +170,8 @@ async def test_get_user_by_id(access_token, second_test_user, third_test_user: A
         response = await client.get(url, headers=headers)
     print("Response:", response.text)
 
-    # Проверяем успешность получения информации о пользователе
     assert response.status_code == HTTPStatus.OK
 
-    # Проверяем соответствие полученных данных модели UserInfo
     response_data = response.json()
     assert response_data["id"] == str(third_test_user.id)
     assert response_data["name"] == third_test_user.name
@@ -202,11 +187,10 @@ async def test_get_user_by_id(access_token, second_test_user, third_test_user: A
 async def test_get_second_user_by_id(
     access_token, third_test_user, second_test_user: Any
 ):
-    # Получаем access token
+
     user_id = "e39f3f3c-39d3-4914-875f-7301f5e4c791"
     token = access_token(user_id)
 
-    # Выполняем запрос на получение информации о пользователе
     base_url = "http://0.0.0.0:5000"
     endpoint = f"/user/{second_test_user.id}/"
     url = f"{base_url}{endpoint}?access_token={token}"
@@ -217,7 +201,6 @@ async def test_get_second_user_by_id(
         response = await client.get(url, headers=headers)
     print("Response:", response.text)
 
-    # Проверяем успешность получения информации о пользователе
     assert response.status_code == 400
 
 
@@ -225,11 +208,9 @@ async def test_get_second_user_by_id(
 async def test_update_user_for_admin(
     access_token, second_test_user, third_test_user: Any
 ):
-    # Получаем access token
     user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"
     token = access_token(user_id)
 
-    # Подготовка данных для обновления
     updated_data = {
         "name": "katya",
         "surname": "lekatya",
@@ -242,7 +223,6 @@ async def test_update_user_for_admin(
         "is_blocked": False,
     }
 
-    # Выполняем запрос на обновление данных пользователя
     base_url = "http://0.0.0.0:5000"
     endpoint = f"/user/{third_test_user.id}/"
     url = f"{base_url}{endpoint}?access_token={token}"
@@ -250,11 +230,9 @@ async def test_update_user_for_admin(
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.patch(url, json=updated_data, headers=headers)
 
-    # Проверяем успешность обновления данных пользователя
     assert response.status_code == HTTPStatus.OK
     print("Response data:", response.text)
 
-    # Проверяем, что ответ содержит обновленные данные пользователя
     response_data = response.json()
     assert response_data["name"] == updated_data["name"]
     assert response_data["surname"] == updated_data["surname"]
@@ -270,11 +248,9 @@ async def test_update_user_for_admin(
 async def test_update_second_user_for_admin(
     access_token, third_test_user, second_test_user: Any
 ):
-    # Получаем access token
     user_id = "e39f3f3c-39d3-4914-875f-7301f5e4c791"
     token = access_token(user_id)
 
-    # Подготовка данных для обновления
     updated_data = {
         "name": "katya",
         "surname": "lekatya",
@@ -287,7 +263,6 @@ async def test_update_second_user_for_admin(
         "is_blocked": False,
     }
 
-    # Выполняем запрос на обновление данных пользователя
     base_url = "http://0.0.0.0:5000"
     endpoint = f"/user/{second_test_user.id}/"
     url = f"{base_url}{endpoint}?access_token={token}"
@@ -295,7 +270,6 @@ async def test_update_second_user_for_admin(
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.patch(url, json=updated_data, headers=headers)
 
-    # Проверяем успешность обновления данных пользователя
     assert response.status_code == 403
 
 
@@ -303,11 +277,10 @@ async def test_update_second_user_for_admin(
 async def test_get_users_for_parameters(
     access_token, second_test_user, six_test_user: Any
 ):
-    # Получаем access token
-    user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"  # ID пользователя с ролью admin
+    user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"
     token = access_token(user_id)
 
-    user_id_main = str(six_test_user.id)  # Подготовка данных запроса
+    user_id_main = str(six_test_user.id)
     print("user_id_main:", user_id_main)
 
     query_params = {
@@ -326,15 +299,12 @@ async def test_get_users_for_parameters(
     query_string = urllib.parse.urlencode(query_params)
     full_url = f"{url}?access_token={token}&{query_string}"
 
-    # Выполняем запрос
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.get(full_url, headers=headers)
     print("Response data:", response.text)
 
-    # Проверяем успешность запроса и ожидаемый статус код
     assert response.status_code == 200
 
-    # Проверяем, что ответ не пустой
     assert response.json()
 
 
@@ -342,11 +312,10 @@ async def test_get_users_for_parameters(
 async def test_get_second_users_for_parameters(
     access_token, second_test_user, six_test_user: Any
 ):
-    # Получаем access token
-    user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"  # ID пользователя с ролью admin
+    user_id = "c0b266a1-f393-471a-9e68-83c38fc4270d"
     token = access_token(user_id)
 
-    user_id_main = str(six_test_user.id)  # Подготовка данных запроса
+    user_id_main = str(six_test_user.id)
     print("user_id_main:", user_id_main)
 
     query_params = {
@@ -365,13 +334,10 @@ async def test_get_second_users_for_parameters(
     query_string = urllib.parse.urlencode(query_params)
     full_url = f"{url}?access_token={token}&{query_string}"
 
-    # Выполняем запрос
     async with httpx.AsyncClient(http2=True) as client:
         response = await client.get(full_url, headers=headers)
     print("Response data:", response.text)
 
-    # Проверяем успешность запроса и ожидаемый статус код
     assert response.status_code == 422
 
-    # Проверяем, что ответ не пустой
     assert response.json()

@@ -5,7 +5,6 @@ from src.infrastructure.database.create_db import engine
 from src.domain.users.schemas import UserInfo, UpdateUser
 from http import HTTPStatus
 
-# from src.config.models.role import State
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from fastapi import APIRouter
 import jwt
@@ -21,18 +20,14 @@ router = APIRouter(prefix="/user", tags=["Users"])
 @router.get("/me/", response_model=UserInfo)
 async def user_info(access_token: str) -> UserInfo:
     try:
-        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
 
         user_id = str(decoded_token.get("user_id"))
 
-        # получаю информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id)
 
-        # преобразую UUID в строку для поля id
         user_info["id"] = str(user_info["id"])
 
-        # создаю экземпляр класса UserInfo с полученной информацией о пользователе
         user_info_instance = UserInfo(**user_info)
 
         return user_info_instance
@@ -43,21 +38,19 @@ async def user_info(access_token: str) -> UserInfo:
 @router.patch("/me/", response_model=UpdateUser)
 async def update_user(data: UpdateUser, access_token: str) -> UpdateUser:
     try:
-        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User ID not found in token")
 
-        # Проверяем, является ли значение role допустимым
+        # Checking if the role value is valid
         valid_roles = [role.value for role in Role]
         if data.role not in valid_roles:
             raise HTTPException(
                 status_code=400, detail="Invalid value for 'role' field"
             )
 
-        # обновление информации о пользователе
         updated_user = await db.update(session, user_id, data)
 
         return updated_user
@@ -71,14 +64,11 @@ async def update_user(data: UpdateUser, access_token: str) -> UpdateUser:
 @router.delete("/me/", status_code=HTTPStatus.NO_CONTENT)
 async def delete_user(access_token: str) -> None:
     try:
-        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id = str(decoded_token.get("user_id"))
 
-        # получаю информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id)
 
-        # преобразую UUID в строку для поля id
         user_info["id"] = str(user_info["id"])
 
         await db.delete(session, user_id)
@@ -92,29 +82,22 @@ async def delete_user(access_token: str) -> None:
 @router.get("/{user_id}/", response_model=UserInfo)
 async def get_user_by_id(access_token: str, user_id: str) -> UserInfo:
     try:
-        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id_main = str(decoded_token.get("user_id"))
 
-        # получаю информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id_main)
 
-        # извлекаю роль пользователя из информации о пользователе
         user_role = user_info.get("role")
 
-        # проверяю роль пользователя и выполняем соответствующие действия
         if user_role == Role.ADMIN.value:
-            # получаю информацию о пользователе по его ID
             user_info = await db.get_user_info_by_id(session, user_id)
             user_info["id"] = str(user_info["id"])
 
-            # создаю экземпляр класса UserInfo с полученной информацией о пользователе
             user_info_instance = UserInfo(**user_info)
 
             return user_info_instance
 
         elif user_role == Role.MODERATOR.value:
-            # получаю информацию о пользователе по его ID
             user_info = await db.get_user_info_by_id(session, user_id)
             if (
                 user_info["group"]
@@ -122,7 +105,6 @@ async def get_user_by_id(access_token: str, user_id: str) -> UserInfo:
             ):
                 user_info["id"] = str(user_info["id"])
 
-                # создаю экземпляр класса UserInfo с полученной информацией о пользователе
                 user_info_instance = UserInfo(**user_info)
 
                 return user_info_instance
@@ -142,28 +124,22 @@ async def update_user_for_admin(
     data: UpdateUser,
 ) -> UpdateUser:
     try:
-        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id_main = str(decoded_token.get("user_id"))
 
-        # получаю информацию о пользователе по его ID
         user_info = await db.get_user_info_by_id(session, user_id_main)
 
-        # извлекю роль пользователя из информации о пользователе
         user_role = user_info.get("role")
 
-        # проверяю роль пользователя
         if user_role != Role.ADMIN.value:
             raise HTTPException(status_code=403, detail="Insufficient access rights")
 
-        # Проверяем допустимость новой роли пользователя
         valid_roles = [role.value for role in Role]
         if data.role not in valid_roles:
             raise HTTPException(
                 status_code=400, detail="Invalid value for 'role' field"
             )
 
-        # обновляю информацию о пользователе
         updated_user = await db.update(session, user_id, data)
 
         return updated_user
@@ -186,21 +162,16 @@ async def get_users_for_parameters(
 ):
 
     try:
-        # извлекаю user_id из токена
         decoded_token = await decode_jwt(access_token)
         user_id_main = str(decoded_token.get("user_id"))
 
-        # получаю информацию о пользователе по его id
         user_info = await db.get_user_info_by_id(session, user_id_main)
 
-        # извлекаю роль пользователя из информации о пользователе
         user_role = user_info.get("role")
 
         if user_role == Role.ADMIN.value:
-            # получаем все группы пользователей
             all_groups = await db.get_all_groups(session)
 
-            # вызываю функцию get_with_parameters, передавая ей параметры из запроса
             users = await db.get_with_parameters(
                 async_session=session,
                 page=page,
@@ -208,15 +179,13 @@ async def get_users_for_parameters(
                 filter_by_name=filter_by_name,
                 sort_by=sort_by,
                 order_by=order_by,
-                groups=all_groups,  # передаю список всех групп
+                groups=all_groups,
             )
             return users
 
         elif user_role == Role.MODERATOR.value:
-            # получаю group текущего пользователя
             user_group = user_info["group"]
 
-            # вызываю функцию get_with_parameters с указанием группы пользователя
             users = await db.get_with_parameters(
                 async_session=session,
                 page=page,
@@ -224,12 +193,11 @@ async def get_users_for_parameters(
                 filter_by_name=filter_by_name,
                 sort_by=sort_by,
                 order_by=order_by,
-                groups=[user_group],  # передаю группу текущего пользователя
+                groups=[user_group],
             )
             return users
 
         else:
-            # если роль user, возвращаю сообщение об отсутствии доступа
             return {"message": "insufficient access rights"}
 
     except Exception as e:

@@ -13,7 +13,6 @@ from httpx import AsyncClient
 from src.domain.users.views import session
 from src.domain.users.crud import CRUD
 
-# Загрузка переменных окружения из файла .env
 config = Config(".env")
 DB_HOST_TEST = config("DB_HOST_TEST")
 DB_PORT_TEST = config("DB_PORT_TEST")
@@ -21,22 +20,19 @@ DB_NAME_TEST = config("DB_NAME_TEST")
 DB_USER_TEST = config("DB_USER_TEST")
 DB_PASS_TEST = config("DB_PASS_TEST")
 
-# Формирование URL для подключения к тестовой базе данных
 DATABASE_URL_TEST = f"postgresql+asyncpg://{DB_USER_TEST}:{DB_PASS_TEST}@{DB_HOST_TEST}:{DB_PORT_TEST}/{DB_NAME_TEST}"
 
-# Создание асинхронного соединения с тестовой базой данных
 engine_test = create_async_engine(DATABASE_URL_TEST, poolclass=NullPool)
 async_session_maker = sessionmaker(
     engine_test, class_=AsyncSession, expire_on_commit=False
 )
 
-# Создание клиента для тестирования
 client = AsyncClient()
 
 db = CRUD()
 
 
-# Переопределение зависимостей для получения асинхронной сессии в тестах
+# Overriding dependencies to get an asynchronous session in tests
 async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
@@ -55,7 +51,6 @@ def access_token():
 
 @pytest.fixture(scope="module")
 async def test_user():
-    # Создаем нового пользователя в базе данных
     user_data = {
         "id": "30012843-1d0f-4ee0-b17f-a99f70e0aeec",
         "name": "vvv",
@@ -73,7 +68,6 @@ async def test_user():
     await db.add(session, user)
     print("user:", user)
 
-    # Выводим список всех пользователей для проверки
     users = await db.get_all(session)
     print("All users:", users)
 
@@ -82,7 +76,6 @@ async def test_user():
 
 @pytest.fixture(scope="module")
 async def second_test_user():
-    # Создаем нового пользователя в базе данных
     user_data = {
         "id": "c0b266a1-f393-471a-9e68-83c38fc4270d",
         "name": "helen",
@@ -100,7 +93,6 @@ async def second_test_user():
     await db.add(session, user)
     print("user:", user)
 
-    # Выводим список всех пользователей для проверки
     users = await db.get_all(session)
     print("All users:", users)
 
@@ -109,7 +101,6 @@ async def second_test_user():
 
 @pytest.fixture(scope="module")
 async def third_test_user():
-    # Создаем нового пользователя в базе данных
     user_data = {
         "id": "e39f3f3c-39d3-4914-875f-7301f5e4c791",
         "name": "katsiaryna",
@@ -127,7 +118,6 @@ async def third_test_user():
     await db.add(session, user)
     print("user:", user)
 
-    # Выводим список всех пользователей для проверки
     users = await db.get_all(session)
     print("All users:", users)
 
@@ -136,7 +126,6 @@ async def third_test_user():
 
 @pytest.fixture(scope="module")
 async def fourth_test_user():
-    # Создаем нового пользователя в базе данных
     user_data = {
         "id": "3e1ab104-648c-458f-968f-dbfcc57c92f9",
         "name": "valery",
@@ -154,7 +143,6 @@ async def fourth_test_user():
     await db.add(session, user)
     print("user:", user)
 
-    # Выводим список всех пользователей для проверки
     users = await db.get_all(session)
     print("All users:", users)
 
@@ -163,7 +151,6 @@ async def fourth_test_user():
 
 @pytest.fixture(scope="module")
 async def fifth_test_user():
-    # Создаем нового пользователя в базе данных
     user_data = {
         "id": "c8285014-a740-4d47-b3b1-42a5aeffb5f1",
         "name": "ann",
@@ -184,7 +171,6 @@ async def fifth_test_user():
 
 @pytest.fixture(scope="module")
 async def six_test_user():
-    # Создаем нового пользователя в базе данных
     user_data = {
         "id": "1af54f6d-376e-4c1b-aef4-c3d3b27745c6",
         "name": "katya",

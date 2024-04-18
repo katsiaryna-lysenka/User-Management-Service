@@ -36,7 +36,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-# Определение функции для получения асинхронной сессии с базой данных
+# Defining a function to obtain an asynchronous session with a database
 async def get_db():
     db = None
     try:

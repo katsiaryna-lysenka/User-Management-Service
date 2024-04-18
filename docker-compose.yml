@@ -26,9 +26,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345
-      - POSTGRES_DB=postgres
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     networks:
       - backend
 
@@ -37,9 +37,9 @@ services:
     restart: always
     container_name: postgresql_test-container
     ports:
-      - "5433:5432"  # Этот порт для тестовой базы данных
+      - "5433:5432"
     environment:
-      POSTGRES_PASSWORD: 12345
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     networks:
       - backend
 
@@ -56,6 +56,14 @@ services:
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # RabbitMQ Management
+    networks:
+      - backend
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack-container
+    ports:
+      - "4510:4510"
     networks:
       - backend
 

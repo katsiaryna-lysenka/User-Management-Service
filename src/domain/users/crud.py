@@ -160,23 +160,20 @@ class CRUD:
         groups: List[str],
     ):
         async with async_session() as session:
-            # получаю объект Select для таблицы User
             statement = select(User)
 
-            # формирую условия для фильтрации по группе
+            # creating conditions for filtering by group
             group_conditions = [User.group == group for group in groups]
 
-            # собираю все условия в одно выражение с оператором ИЛИ
+            # I collect all the conditions into one expression with the OR operator
             group_filter = or_(*group_conditions)
 
-            # применяю фильтрацию по пользователям из определенных групп
             statement = statement.filter(group_filter)
 
-            # применяю фильтрацию по имени, если она задана
             if filter_by_name:
                 statement = statement.filter(User.name == filter_by_name)
 
-            # определяю сортировку
+            # I define sorting
             sort_column = getattr(User, sort_by, None)
             if sort_column:
                 if order_by == "asc":
@@ -188,11 +185,11 @@ class CRUD:
                         "Invalid value for 'order_by'. Must be 'asc' or 'desc'."
                     )
 
-            # вычисляю смещение и ограничение для пагинации
+            # calculating offset and constraint for pagination
             offset = (page - 1) * limit
             statement = statement.offset(offset).limit(limit)
 
-            # выполняю запрос и возвращаем результат
+            # I execute the request and return the result
             result = await session.execute(statement)
             users = result.scalars().all()
 
@@ -211,7 +208,6 @@ class CRUD:
         username: str,
         password: str,
     ):
-        # аутентификация пользователя
         user = await self.get_by_login(async_session, username)
         if not user:
             raise ValueError("Invalid credentials")

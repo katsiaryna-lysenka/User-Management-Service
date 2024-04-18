@@ -1,18 +1,23 @@
 from datetime import datetime
 from http import HTTPStatus
-from typing import Optional
+from typing import Optional, Annotated
 
+import boto3
+from botocore.client import Config
+from botocore.session import get_session
 from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
+from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
+from src.config import Settings, settings
 from src.domain.auth.functions import (
     perform_reset_password,
     get_refreshed_token,
     generate_tokens,
 )
 from src.domain.auth.utils import hash_password
-from src.domain.users.schemas import TokenInfo
+from src.domain.users.schemas import TokenInfo, UserInfo
 from fastapi import (
     APIRouter,
     status,
@@ -27,8 +32,8 @@ from fastapi.security import HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
-from src.infrastructure.database.create_db import engine, get_db
-from src.infrastructure.models import User
+from src.infrastructure.database.create_db import engine, get_db, SessionLocal
+from src.infrastructure.models import User, Role
 from src.domain.users.crud import CRUD
 from src.domain.users.schemas import CreateUser
 
@@ -42,10 +47,7 @@ crud = CRUD()
 @router.post("/signup", status_code=HTTPStatus.CREATED, response_model=dict)
 async def create_user(user_data: CreateUser) -> dict:
 
-    # хеширую пароль
     hashed_password = hash_password(user_data.password)
-
-    # преобразую хешированный пароль в строку
     hashed_password_str = hashed_password.decode()
 
     new_user = User(
@@ -57,12 +59,11 @@ async def create_user(user_data: CreateUser) -> dict:
         email=user_data.email,
         role=user_data.role,
         group=user_data.group,
-        # photo=photo.file.read() if photo else None,
+        s3_file_path=user_data.s3_file_path,
     )
 
     user = await db.add(session, new_user)
 
-    # преобразую объект User в словарь, выбирая только нужные атрибуты
     user_dict = {
         "id": user.id,
         "name": user.name,
@@ -88,7 +89,7 @@ async def return_tokens(
     password: str = Form(...),
 ) -> dict:
     try:
-        # генерируем токены доступа и обновления
+
         tokens = await generate_tokens(
             username=username,
             email=email if email != "" else None,
@@ -96,7 +97,6 @@ async def return_tokens(
             password=password,
         )
 
-        # возвращаем токены в формате словаря
         return tokens
 
     except HTTPException as e:
@@ -120,11 +120,11 @@ async def refresh_token(
 
 @router.post("/reset-password", response_model=None)
 async def reset_password(
-    email: str = Header(...), session: AsyncSession = Depends(get_db)
+    email: str, session: AsyncSession = Depends(get_db)
 ):
 
     try:
-        validate_email(email)  # Проверка валидности email
+        validate_email(email)
     except EmailNotValidError:
         raise HTTPException(status_code=400, detail="Invalid email format")
 

@@ -1,19 +1,15 @@
 import os
 from typing import ClassVar
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 from pydantic import BaseModel
 from pathlib import Path
 from sqlalchemy import MetaData
 from dotenv import load_dotenv
 
-# Загрузка переменных окружения из файла .env
 load_dotenv(".env")
 
-# Определение путей к приватному и публичному ключам JWT
 BASE_DIR = Path(__file__).parent.parent
 private_key_path = BASE_DIR / "certs" / "jwt-private.pem"
 public_key_path = BASE_DIR / "certs" / "jwt-public.pem"
@@ -25,7 +21,12 @@ DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 
 
-# Определение настроек для JWT
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+
+
 class AuthJWT(BaseModel):
     private_key_path: Path = private_key_path
     public_key_path: Path = public_key_path
@@ -56,8 +57,8 @@ class Settings(BaseModel):
 
 settings = Settings()
 
-# Создание метаданных для базы данных
+# Creating Metadata for a Database
 metadata = MetaData()
 
-# Создание базового класса для сессий
+# Creating a base class for sessions
 Base = declarative_base()
