@@ -18,7 +18,7 @@ from fastapi.security import HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
-from src.config import engine, get_db
+from src.infrastructure.database.create_db import engine, get_db
 from src.infrastructure.models import User
 from src.domain.users.crud import CRUD
 from src.domain.users.schemas import CreateUser

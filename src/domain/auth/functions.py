@@ -20,7 +20,7 @@ from src.domain.auth.utils import (
     encode_jwt,
 )
 
-from src.config import settings, get_db, engine
+from src.infrastructure.database.create_db import settings, get_db, engine
 from src.infrastructure.models import User
 from jwt import InvalidTokenError
 

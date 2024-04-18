@@ -56,25 +56,8 @@ class Settings(BaseModel):
 
 settings = Settings()
 
-# Создание асинхронного соединения с базой данных
-engine = create_async_engine(settings.db_url, echo=settings.db_echo, future=True)
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
-)
-
 # Создание метаданных для базы данных
 metadata = MetaData()
 
 # Создание базового класса для сессий
 Base = declarative_base()
-
-
-# Определение функции для получения асинхронной сессии с базой данных
-async def get_db():
-    db = None
-    try:
-        async with SessionLocal() as db:
-            yield db
-    finally:
-        if db is not None:
-            await db.close()

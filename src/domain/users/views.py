@@ -1,7 +1,7 @@
 from src.domain.auth.utils import decode_jwt
 from src.infrastructure.models import Role
 from src.domain.users.crud import CRUD
-from src.config import engine
+from src.infrastructure.database.create_db import engine
 from src.domain.users.schemas import UserInfo, UpdateUser
 from http import HTTPStatus
 
