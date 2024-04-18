@@ -34,7 +34,7 @@ jobs:
           black_args: "src"
 
       - name: Test with Docker (User)
-        run: docker exec user-management-container bash -c "pytest -v -s tests/test_user.py"
+        run: docker exec user-management-container bash -c "pytest -v -s src/tests/test_user.py"
 
       - name: Test with Docker (Auth)
-        run: docker exec user-management-container bash -c "pytest -v -s tests/test_auth.py"
+        run: docker exec user-management-container bash -c "pytest -v -s src/tests/test_auth.py"
