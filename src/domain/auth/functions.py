@@ -1,30 +1,32 @@
-from typing import Optional
-
 import aio_pika
 
 import json
 import redis
 from fastapi import Depends, HTTPException, Form
-from fastapi.security import HTTPBasicCredentials
 from pydantic import EmailStr
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.auth.helpers import (
+from src.domain.auth.helpers import (
     create_refresh_token,
     create_reset_token,
     create_access_token,
 )
-from src.auth.utils import decode_jwt, hash_password, validate_password, encode_jwt
+from src.domain.auth.utils import (
+    decode_jwt,
+    hash_password,
+    validate_password,
+    encode_jwt,
+)
 
-from src.core.config import settings, get_db, engine
-from src.core.models import User
+from src.config import settings, get_db, engine
+from src.infrastructure.models import User
 from jwt import InvalidTokenError
 
 from redis.exceptions import RedisError
 
-from src.users.crud import CRUD
+from src.domain.users.crud import CRUD
 
 session = async_sessionmaker(bind=engine, expire_on_commit=False)
 crud = CRUD()

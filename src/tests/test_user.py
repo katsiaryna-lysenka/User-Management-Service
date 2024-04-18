@@ -5,8 +5,8 @@ from .conftest import access_token
 import httpx
 import pytest
 
-from src.users.schemas import UserInfo
-from src.users.crud import CRUD
+from src.domain.users.schemas import UserInfo
+from src.domain.users.crud import CRUD
 
 
 db = CRUD()

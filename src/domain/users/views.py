@@ -1,12 +1,11 @@
-from src.auth.utils import decode_jwt
-from src.core.models import Role
-from src.users.crud import CRUD
-from src.core.config import engine
-from src.users.schemas import UserSchema, UserInfo, UpdateUser
+from src.domain.auth.utils import decode_jwt
+from src.infrastructure.models import Role
+from src.domain.users.crud import CRUD
+from src.config import engine
+from src.domain.users.schemas import UserInfo, UpdateUser
 from http import HTTPStatus
-from typing import List
 
-# from src.core.models.role import State
+# from src.config.models.role import State
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from fastapi import APIRouter
 import jwt

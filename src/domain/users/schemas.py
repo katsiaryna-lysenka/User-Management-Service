@@ -1,11 +1,7 @@
-from pydantic import ConfigDict
-
 from pydantic import BaseModel, EmailStr, constr
-from datetime import datetime
 from typing import Optional, ClassVar
-from uuid import uuid4
 
-from src.core.models import Role
+from src.infrastructure.models import Role
 
 
 class CreateUser(BaseModel):

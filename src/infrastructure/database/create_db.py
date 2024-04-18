@@ -1,13 +1,14 @@
 from sqlalchemy import NullPool
 from sqlalchemy.orm import sessionmaker
 
-from src.core.models.base import Base
-from src.core.config import engine
+from src.infrastructure.models import Base
+
+from src.config import engine
 import asyncio
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from src.users.crud import db_url
+from src.domain.users.crud import db_url
 
 
 async def create_db():

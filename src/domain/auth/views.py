@@ -6,22 +6,22 @@ from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
-from src.auth.functions import (
+from src.domain.auth.functions import (
     perform_reset_password,
     get_refreshed_token,
     generate_tokens,
 )
-from src.auth.utils import encode_jwt, hash_password, validate_password
-from src.users.schemas import TokenInfo
+from src.domain.auth.utils import hash_password
+from src.domain.users.schemas import TokenInfo
 from fastapi import APIRouter, status, HTTPException, Depends, Header, Form
-from fastapi.security import HTTPBasicCredentials, HTTPBasic
+from fastapi.security import HTTPBasic
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
-from src.core.config import engine, get_db
-from src.core.models import User
-from src.users.crud import CRUD
-from src.users.schemas import CreateUser
+from src.config import engine, get_db
+from src.infrastructure.models import User
+from src.domain.users.crud import CRUD
+from src.domain.users.schemas import CreateUser
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 session = async_sessionmaker(bind=engine, expire_on_commit=False)

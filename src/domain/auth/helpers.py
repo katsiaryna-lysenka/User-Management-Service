@@ -1,9 +1,9 @@
 from datetime import timedelta
 
-from src.auth import utils as auth_utils
-from src.core.config import settings
+from src.domain.auth import utils as auth_utils
+from src.config import settings
 
-from src.users.schemas import UserSchema
+from src.domain.users.schemas import UserSchema
 
 
 TOKEN_TYPE_FIELD = "type"
@@ -65,18 +65,3 @@ def create_reset_token(user: UserSchema) -> str:
         token_data=jwt_payload,
         expire_timedelta=timedelta(days=settings.auth_jwt.reset_token_expire_days),
     )
-
-
-# def generate_access_token(payload: dict) -> str:
-#     jwt_payload = {
-#         # subject
-#         "sub": user.user,
-#         "username": user.username,
-#         "email": user.email,
-#         # "logged_in_at"
-#     }
-#     return create_jwt(
-#         token_type=ACCESS_TOKEN_TYPE,
-#         token_data=jwt_payload,
-#         expire_minutes=settings.auth_jwt.access_token_expire_minutes,
-#     )

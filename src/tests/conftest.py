@@ -1,17 +1,17 @@
 from typing import AsyncGenerator
 
 import pytest
-from src.core.models import User
-from src.auth.utils import encode_jwt
-from src.database.create_db import get_async_session
+from src.infrastructure.models import User
+from src.domain.auth.utils import encode_jwt
+from src.infrastructure.database.create_db import get_async_session
 from main import app
 from starlette.config import Config
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from httpx import AsyncClient
-from src.users.views import session
-from src.users.crud import CRUD
+from src.domain.users.views import session
+from src.domain.users.crud import CRUD
 
 # Загрузка переменных окружения из файла .env
 config = Config(".env")
