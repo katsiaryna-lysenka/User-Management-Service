@@ -322,5 +322,13 @@ async def perform_signup(s3_file_path: str, user: CreateUser, session: AsyncSess
         s3_file_path=s3_file_path,  # Сохраняем путь к фотографии в S3
     )
     print("17")
+    session.add(new_user)
+    print("ййй")
+    await session.commit()  # Добавляем пользователя в базу данных и фиксируем изменения
+    print("цццц")
+    await session.refresh(new_user)
+    print("User ID:", new_user.id)
+    print("ууу")
     print(f"new_user: {new_user}")
+    print("кккк")
     return new_user

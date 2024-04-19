@@ -8,6 +8,7 @@ from botocore.session import get_session
 from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
+from sqlalchemy.util import greenlet_spawn
 from starlette.responses import JSONResponse
 
 from src.config import Settings, settings
@@ -81,6 +82,39 @@ crud = CRUD()
 #     return user_dict
 
 
+# @router.post("/signup", response_model=UserInfo)
+# async def signup(
+#     user: CreateUser = Depends(),
+#     image: UploadFile = Depends(check_if_image),
+#     session: AsyncSession = Depends(get_db),
+# ):
+#     print("1")
+#     try:
+#         print("2")
+#         # Загрузка изображения на S3
+#         s3_file_path = await upload_to_s3(image)
+#         print("3")
+#         # Регистрация пользователя
+#
+#         new_user = await perform_signup(s3_file_path, user, session)
+#         print("мммм") # Фиксируем изменения в базе данных
+#         print("4")
+#         # Формирование ответа
+#         print(dir(new_user))
+#         print("5")
+#         new_user_dict = new_user.__dict__
+#         print("6")
+#         new_user_dict["id"] = str(new_user.id)
+#         print(f'new_user_dict("id"): {new_user_dict["id"]}')
+#         print(f'str(new_user_dict.get("id")): {str(new_user_dict.get("id"))}')
+#         print("7")
+#         response_data = UserInfo(**new_user_dict)
+#         print("8")
+#         print(response_data)
+#         return JSONResponse(content=response_data.dict(), status_code=200)
+#     except HTTPException as e:
+#         return JSONResponse(content={"detail": e.detail}, status_code=e.status_code)
+
 @router.post("/signup", response_model=UserInfo)
 async def signup(
     user: CreateUser = Depends(),
@@ -94,16 +128,27 @@ async def signup(
         s3_file_path = await upload_to_s3(image)
         print("3")
         # Регистрация пользователя
+
         new_user = await perform_signup(s3_file_path, user, session)
         print("мммм") # Фиксируем изменения в базе данных
         print("4")
         # Формирование ответа
         print(dir(new_user))
         print("5")
-        new_user_dict = new_user.__dict__
+        new_user_dict = {
+            "id": str(new_user.id),  # Включаем ID пользователя в словарь
+            "name": new_user.name,
+            "surname": new_user.surname,
+            "username": new_user.username,
+            "phone_number": new_user.phone_number,
+            "email": new_user.email,
+            "role": new_user.role,
+            "group": new_user.group,
+            "is_blocked": new_user.is_blocked,
+            "created_at": new_user.created_at,
+            "modified_at": new_user.modified_at,
+        }
         print("6")
-        #new_user_dict["id"] = str(new_user_dict.get("id"))
-        new_user_dict["id"] = str(new_user.id)
         print(f'new_user_dict("id"): {new_user_dict["id"]}')
         print(f'str(new_user_dict.get("id")): {str(new_user_dict.get("id"))}')
         print("7")
@@ -113,7 +158,6 @@ async def signup(
         return JSONResponse(content=response_data.dict(), status_code=200)
     except HTTPException as e:
         return JSONResponse(content={"detail": e.detail}, status_code=e.status_code)
-
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
 async def return_tokens(
