@@ -21,10 +21,11 @@ DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 
 
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_KEY_ID = os.getenv("AWS_SECRET_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+S3_BASE_URL = os.getenv("S3_BASE_URL")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
+LOCALSTACK_HOST = os.getenv("LOCALSTACK_HOST")
 
 
 class AuthJWT(BaseModel):

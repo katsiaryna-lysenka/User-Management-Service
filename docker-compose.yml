@@ -12,6 +12,7 @@ services:
       - postgresql
       - redis
       - rabbitmq
+      - localstack
     environment:
       - REDIS_HOST=redis_manager_field
     volumes:
@@ -63,7 +64,7 @@ services:
     image: localstack/localstack:latest
     container_name: localstack-container
     ports:
-      - "4510:4510"
+      - "4566:4566"
     networks:
       - backend
 

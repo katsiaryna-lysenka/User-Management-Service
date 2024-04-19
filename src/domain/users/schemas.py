@@ -14,7 +14,6 @@ class CreateUser(BaseModel):
     email: EmailStr
     role: Role
     group: str = "Cat"
-    s3_file_path: Optional[str] = None
 
 
 class UserSchema(BaseModel):

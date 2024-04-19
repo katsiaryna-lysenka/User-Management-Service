@@ -14,7 +14,7 @@ from src.config import Settings, settings
 from src.domain.auth.functions import (
     perform_reset_password,
     get_refreshed_token,
-    generate_tokens,
+    generate_tokens, check_if_image, upload_to_s3, perform_signup,
 )
 from src.domain.auth.utils import hash_password
 from src.domain.users.schemas import TokenInfo, UserInfo
@@ -44,41 +44,75 @@ security = HTTPBasic()
 crud = CRUD()
 
 
-@router.post("/signup", status_code=HTTPStatus.CREATED, response_model=dict)
-async def create_user(user_data: CreateUser) -> dict:
+# @router.post("/signup", status_code=HTTPStatus.CREATED, response_model=dict)
+# async def create_user(user_data: CreateUser) -> dict:
+#
+#     hashed_password = hash_password(user_data.password)
+#     hashed_password_str = hashed_password.decode()
+#
+#     new_user = User(
+#         name=user_data.name,
+#         surname=user_data.surname,
+#         username=user_data.username,
+#         password=hashed_password_str,
+#         phone_number=user_data.phone_number,
+#         email=user_data.email,
+#         role=user_data.role,
+#         group=user_data.group,
+#         s3_file_path=user_data.s3_file_path,
+#     )
+#
+#     user = await db.add(session, new_user)
+#
+#     user_dict = {
+#         "id": user.id,
+#         "name": user.name,
+#         "surname": user.surname,
+#         "username": user.username,
+#         "phone_number": user.phone_number,
+#         "email": user.email,
+#         "role": user.role,
+#         "group": user.group,
+#         "is_blocked": user.is_blocked,
+#         "created_at": datetime.now(),
+#         "modified_at": datetime.now(),
+#     }
+#
+#     return user_dict
 
-    hashed_password = hash_password(user_data.password)
-    hashed_password_str = hashed_password.decode()
 
-    new_user = User(
-        name=user_data.name,
-        surname=user_data.surname,
-        username=user_data.username,
-        password=hashed_password_str,
-        phone_number=user_data.phone_number,
-        email=user_data.email,
-        role=user_data.role,
-        group=user_data.group,
-        s3_file_path=user_data.s3_file_path,
-    )
-
-    user = await db.add(session, new_user)
-
-    user_dict = {
-        "id": user.id,
-        "name": user.name,
-        "surname": user.surname,
-        "username": user.username,
-        "phone_number": user.phone_number,
-        "email": user.email,
-        "role": user.role,
-        "group": user.group,
-        "is_blocked": user.is_blocked,
-        "created_at": datetime.now(),
-        "modified_at": datetime.now(),
-    }
-
-    return user_dict
+@router.post("/signup", response_model=UserInfo)
+async def signup(
+    user: CreateUser = Depends(),
+    image: UploadFile = Depends(check_if_image),
+    session: AsyncSession = Depends(get_db),
+):
+    print("1")
+    try:
+        print("2")
+        # Загрузка изображения на S3
+        s3_file_path = await upload_to_s3(image)
+        print("3")
+        # Регистрация пользователя
+        new_user = await perform_signup(s3_file_path, user, session)
+        print("мммм") # Фиксируем изменения в базе данных
+        print("4")
+        # Формирование ответа
+        print(dir(new_user))
+        print("5")
+        new_user_dict = new_user.__dict__
+        print("6")
+        #new_user_dict["id"] = str(new_user_dict.get("id"))
+        new_user_dict["id"] = str(new_user.id)
+        print(f'new_user_dict("id"): {new_user_dict["id"]}')
+        print(f'str(new_user_dict.get("id")): {str(new_user_dict.get("id"))}')
+        print("7")
+        response_data = UserInfo(**new_user_dict)
+        print("8")
+        print(response_data)
+        return JSONResponse(content=response_data.dict(), status_code=200)
+    except HTTPException as e:
+        return JSONResponse(content={"detail": e.detail}, status_code=e.status_code)
 
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=dict)
