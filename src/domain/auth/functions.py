@@ -1,7 +1,11 @@
 import os
 import uuid
 import time
+import uuid
 
+import boto3
+from botocore.exceptions import ClientError
+from fastapi import UploadFile
 import aio_pika
 import boto3
 from botocore.exceptions import ClientError
@@ -230,52 +234,9 @@ async def check_if_image(image: UploadFile = File(None)):
         raise HTTPException(status_code=400, detail="Wrong file type")
 
 
-import uuid
-
-import boto3
-from botocore.exceptions import ClientError
-from fastapi import UploadFile
-
-
-
-# async def upload_to_s3(image: UploadFile):
-#     try:
-#         if not image:
-#             print("7")
-#             return None
-#
-#         bucket_name = src.config.BUCKET_NAME
-#         s3_bucket_url = f"{src.config.S3_BASE_URL}/{bucket_name}"
-#         print("8")
-#         s3_client = boto3.client(
-#             "s3",
-#             endpoint_url=s3_bucket_url,
-#             aws_access_key_id=src.config.AWS_SECRET_KEY_ID,
-#             aws_secret_access_key=src.config.AWS_SECRET_ACCESS_KEY,
-#         )
-#         print("9")
-#         s3_client.create_bucket(Bucket=bucket_name)
-#         print("10")
-#         file_content = await image.read()
-#         print("11")
-#         unique_filename = f"{str(uuid.uuid4())}.{image.filename.split('.')[-1]}"
-#         print("12")
-#         response = s3_client.put_object(
-#             Bucket=bucket_name, Key=unique_filename, Body=file_content
-#         )
-#         print("13")
-#         s3_path = f"http://{bucket_name}.{src.config.LOCALSTACK_HOST}/{bucket_name}/{unique_filename}"
-#         print("14")
-#         return s3_path
-#     except ClientError as e:
-#         print(e)
-#         return None
-
-
 async def upload_to_s3(image: UploadFile):
     try:
         if not image:
-            print("7")
             return None
 
         bucket_name = src.config.BUCKET_NAME
@@ -287,15 +248,12 @@ async def upload_to_s3(image: UploadFile):
             aws_secret_access_key=src.config.AWS_SECRET_ACCESS_KEY,
             verify=False
         )
-        print("8")
-        print("9")
+
         s3_client.create_bucket(Bucket=bucket_name)
 
-        print("10")
         file_content = await image.read()
-        print("11")
         unique_filename = f"{str(uuid.uuid4())}.{image.filename.split('.')[-1]}"
-        print("12")
+
         response = s3_client.put_object(
             Bucket=bucket_name, Key=unique_filename, Body=file_content
         )
@@ -305,11 +263,10 @@ async def upload_to_s3(image: UploadFile):
 
 
 async def perform_signup(s3_file_path: str, user: CreateUser, session: AsyncSession) -> User:
-    # Создаем нового пользователя с названием фотографии в S3
-    print("15")
+
     hashed_password = hash_password(user.password)
     hashed_password_str = hashed_password.decode()
-    print("16")
+
     new_user = User(
         name=user.name,
         surname=user.surname,
@@ -319,16 +276,12 @@ async def perform_signup(s3_file_path: str, user: CreateUser, session: AsyncSess
         email=user.email,
         role=user.role,
         group=user.group,
-        s3_file_path=s3_file_path,  # Сохраняем путь к фотографии в S3
+        s3_file_path=s3_file_path,
     )
-    print("17")
+
     session.add(new_user)
-    print("ййй")
-    await session.commit()  # Добавляем пользователя в базу данных и фиксируем изменения
-    print("цццц")
+
+    await session.commit()
     await session.refresh(new_user)
-    print("User ID:", new_user.id)
-    print("ууу")
-    print(f"new_user: {new_user}")
-    print("кккк")
+
     return new_user

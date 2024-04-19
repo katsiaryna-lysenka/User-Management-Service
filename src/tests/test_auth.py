@@ -8,7 +8,6 @@ import httpx
 @pytest.mark.asyncio
 async def test_create_user():
     user_data = {
-        "id": "fb4e9d85-26cf-40ec-9660-c8fd7cfed8b9",
         "name": "nikol",
         "surname": "syt",
         "username": "nikol_l_l",
@@ -17,20 +16,18 @@ async def test_create_user():
         "email": "nikol@gmail.com",
         "role": "user",
         "group": "Dog",
-        "is_blocked": False,
-        "created_at": "2024-04-15T13:30:13.488Z",
-        "modified_at": "2024-04-15T13:30:13.488Z",
     }
 
     base_url = "http://0.0.0.0:5000"
     endpoint = "/auth/signup"
-    url = f"{base_url}{endpoint}"
-    headers = {"accept": "application/json", "Content-Type": "application/json"}
+    url = f"{base_url}{endpoint}?name={user_data['name']}&surname={user_data['surname']}&username={user_data['username']}&password={user_data['password']}&phone_number={user_data['phone_number']}&email={user_data['email']}&role={user_data['role']}&group={user_data['group']}"
+    headers = {"accept": "application/json", "Content-Type": "multipart/form-data; boundary=boundary"}
 
     async with httpx.AsyncClient(http2=True) as client:
-        response = await client.post(url, headers=headers, json=user_data)
+        response = await client.post(url, headers=headers)
 
-    assert response.status_code == 201
+    print("Response data:", response.text)
+    assert response.status_code == 200
     assert "id" in response.json()
 
 
@@ -63,13 +60,13 @@ async def test_create_second_user():
 
 
 @pytest.mark.asyncio
-async def test_login_endpoint():
+async def test_login_endpoint(test_user):
 
     data = {
-        "username": "nikol_l_l",
-        "email": "nikol@gmail.com",
+        "username": "vvv",
+        "email": "vvv@example.com",
         "phone_number": "",
-        "password": "99987777",
+        "password": "11144444",
     }
 
     base_url = "http://0.0.0.0:5000"
