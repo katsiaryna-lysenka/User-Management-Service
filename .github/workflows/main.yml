@@ -33,6 +33,9 @@ jobs:
         with:
           black_args: "src"
 
+      - name: Start Docker container
+        run: docker start user-management-container || true
+
       - name: Test with Docker (User)
         run: docker exec user-management-container bash -c "pytest -v -s src/tests/test_user.py"
 
