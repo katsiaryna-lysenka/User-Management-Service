@@ -38,7 +38,7 @@ services:
     restart: always
     container_name: postgresql_test-container
     ports:
-      - "5433:5432"
+      - "5433:5433"
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     networks:
