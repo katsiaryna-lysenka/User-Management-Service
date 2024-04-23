@@ -57,6 +57,10 @@ services:
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # RabbitMQ Management
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=12345
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit inet_dist_listen_min 25672 -rabbit inet_dist_listen_max 25672
     networks:
       - backend
 

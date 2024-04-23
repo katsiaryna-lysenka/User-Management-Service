@@ -189,7 +189,8 @@ async def perform_reset_password(email: str, session: AsyncSession = Depends(get
 async def publish_reset_email_message(email: str, reset_token: str):
     try:
         connection = await aio_pika.connect_robust(
-            f"amqp://guest:guest@{settings.rabbitmq_host}/"
+            #f"amqp://guest:guest@{settings.rabbitmq_host}/"
+            f"amqp://user:12345@{settings.rabbitmq_host}/"
         )
     except aio_pika.exceptions.AMQPConnectionError as e:
         error_message = f"Error connecting to RabbitMQ: {str(e)}"
