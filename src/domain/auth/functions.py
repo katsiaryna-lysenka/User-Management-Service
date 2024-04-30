@@ -35,7 +35,7 @@ from src.domain.users.schemas import CreateUser
 from src.infrastructure.database.create_db import settings, get_db, engine
 from src.infrastructure.models import User
 from jwt import InvalidTokenError
-
+from dotenv import load_dotenv
 from redis.exceptions import RedisError
 
 from src.domain.users.crud import CRUD
@@ -188,10 +188,8 @@ async def perform_reset_password(email: str, session: AsyncSession = Depends(get
 
 async def publish_reset_email_message(email: str, reset_token: str):
     try:
-        connection = await aio_pika.connect_robust(
-            #f"amqp://guest:guest@{settings.rabbitmq_host}/"
-            f"amqp://user:12345@{settings.rabbitmq_host}/"
-        )
+        connection = await aio_pika.connect_robust("amqp://user:12345@rabbitmq:5672/")
+        print(f"connection = {connection}")
     except aio_pika.exceptions.AMQPConnectionError as e:
         error_message = f"Error connecting to RabbitMQ: {str(e)}"
         return
@@ -247,7 +245,7 @@ async def upload_to_s3(image: UploadFile):
             endpoint_url=s3_base_url,
             aws_access_key_id=src.config.AWS_SECRET_KEY_ID,
             aws_secret_access_key=src.config.AWS_SECRET_ACCESS_KEY,
-            verify=False
+            verify=False,
         )
 
         s3_client.create_bucket(Bucket=bucket_name)
@@ -263,7 +261,9 @@ async def upload_to_s3(image: UploadFile):
         return None
 
 
-async def perform_signup(s3_file_path: str, user: CreateUser, session: AsyncSession) -> User:
+async def perform_signup(
+    s3_file_path: str, user: CreateUser, session: AsyncSession
+) -> User:
 
     hashed_password = hash_password(user.password)
     hashed_password_str = hashed_password.decode()

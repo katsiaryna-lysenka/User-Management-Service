@@ -53,7 +53,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:latest
-    container_name: rabbitmq-container
+    #container_name: rabbitmq-container
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # RabbitMQ Management
@@ -74,7 +74,8 @@ services:
 
 networks:
   backend:
-    driver: bridge
-
+      name: backend
+      external: true
+      driver: bridge
 
 
