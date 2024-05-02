@@ -1,9 +1,8 @@
 import logging
 from typing import Optional, Annotated
 
-import boto3
-from botocore.client import Config
-from botocore.session import get_session
+from datetime import datetime
+from src.infrastructure.models.reset_password_message import ResetPasswordMessage
 from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 from sqlalchemy import select
@@ -133,6 +132,43 @@ async def reset_password(
         raise HTTPException(status_code=400, detail=e)
 
 
+# @router.post("/set-new-password")
+# async def set_new_password(
+#         new_password_request: NewPasswordRequest,
+#         reset_token: str = Query(..., description="Reset token received in the email"),
+#         session: AsyncSession = Depends(get_db)
+# ):
+#     try:
+#         user_email = await verify_reset_token(reset_token)
+#         if not user_email:
+#             raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+#
+#         async with session.begin():
+#             # Находим пользователя в базе данных по email
+#             stmt = select(User).filter(User.email == user_email)
+#             result = await session.execute(stmt)
+#             user = result.scalars().first()
+#
+#             if not user:
+#                 raise HTTPException(status_code=404, detail="User not found")
+#
+#             hashed_password = hash_password(new_password_request.password)
+#
+#             # Обновляем хешированный пароль пользователя
+#             user.password = hashed_password.decode()  # Преобразуем байтовую строку в строку
+#
+#             logger.info(f"Updating password for user: {user.email}")
+#
+#             return "The password was updated successfully!"
+#
+#     except HTTPException as e:
+#         logger.error(f"HTTPException occurred: {e.detail}")
+#         raise e
+#
+#     except Exception as e:
+#         logger.exception(f"Failed to update password: {str(e)}")
+#         raise HTTPException(status_code=500, detail="Failed to update password")
+
 @router.post("/set-new-password")
 async def set_new_password(
         new_password_request: NewPasswordRequest,
@@ -145,7 +181,7 @@ async def set_new_password(
             raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
         async with session.begin():
-            # Находим пользователя в базе данных по email
+            # Find the user in the database by email
             stmt = select(User).filter(User.email == user_email)
             result = await session.execute(stmt)
             user = result.scalars().first()
@@ -153,10 +189,18 @@ async def set_new_password(
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
 
+            # Update the user's password
             hashed_password = hash_password(new_password_request.password)
+            user.password = hashed_password.decode()  # Convert bytes to string
 
-            # Обновляем хешированный пароль пользователя
-            user.password = hashed_password.decode()  # Преобразуем байтовую строку в строку
+            # Create and save a ResetPasswordMessage
+            reset_message = ResetPasswordMessage(
+                user_id=user.id,
+                email_address=user.email,
+                subject="Password Reset",
+                body="Your password has been successfully reset.",
+            )
+            session.add(reset_message)
 
             logger.info(f"Updating password for user: {user.email}")
 

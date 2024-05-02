@@ -5,6 +5,7 @@ __all__ = (
     "Role",
     "User",
     "Group",
+    "ResetPasswordMessage",
 )
 
 from .base import Base
@@ -12,3 +13,4 @@ from .role import Role
 from .group import Group
 from .db_helper import db_helper, DatabaseHelper
 from .user import User
+from .reset_password_message import ResetPasswordMessage
