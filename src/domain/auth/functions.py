@@ -286,3 +286,16 @@ async def perform_signup(
     await session.refresh(new_user)
 
     return new_user
+
+
+async def verify_reset_token(reset_token: str) -> int:
+    try:
+        payload = await decode_jwt(reset_token)
+        print(f"Decoded payload: {payload}")
+        user_email = payload.get("sub")
+        if not user_email:
+            raise HTTPException(status_code=401, detail="Invalid token: No email found in token")
+        return user_email
+    except InvalidTokenError as e:
+        print(f"Error decoding token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token: Token decoding failed")

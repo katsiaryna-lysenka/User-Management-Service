@@ -2,6 +2,8 @@ from datetime import timedelta, datetime
 
 import jwt
 import bcrypt
+from fastapi import HTTPException
+
 from src.config import settings
 
 
@@ -41,13 +43,18 @@ async def decode_jwt(
         with open(settings.auth_jwt.public_key_path, "r") as file:
             public_key = file.read()
 
-    decoded = jwt.decode(
-        token,
-        public_key,
-        algorithms=[algorithms],
-    )
-
-    return decoded
+    try:
+        decoded = jwt.decode(
+            token,
+            public_key,
+            algorithms=[algorithms],
+        )
+        return decoded
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Invalid token: Token has expired")
+    except jwt.InvalidTokenError as e:
+        print(f"Error decoding token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token: Token decoding failed")
 
 
 def hash_password(
