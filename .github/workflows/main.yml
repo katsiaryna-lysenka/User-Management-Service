@@ -1,0 +1,43 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - feature-dev
+  pull_request:
+    branches:
+      - feature-dev
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Copy secrets to .env
+        run:
+          echo "${{ secrets.ENV }}" > .env
+
+      - name: Build Docker
+        run: docker compose -f docker-compose.yml up --build -d
+
+      - name: Format with Black
+        uses: rickstaa/action-black@v1
+        with:
+          black_args: "src"
+
+      - name: Start Docker container
+        run: docker start user-management-container || true
+
+      - name: Test with Docker (Auth)
+        run: docker exec user-management-container bash -c "pytest -v -s src/tests/test_auth.py"
+
+      - name: Test with Docker (User)
+        run: docker exec user-management-container bash -c "pytest -v -s src/tests/test_user.py"

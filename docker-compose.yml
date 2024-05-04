@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  user-management:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-management-container
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgresql
+      - redis
+      - rabbitmq
+      - localstack
+    environment:
+      - REDIS_HOST=redis_manager_field
+    volumes:
+      - .env:/app/.env
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgresql:
+    image: postgres:latest
+    restart: always
+    container_name: postgresql-container
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:latest
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # RabbitMQ Management
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=12345
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit inet_dist_listen_min 25672 -rabbit inet_dist_listen_max 25672
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack-container
+    ports:
+      - "4566:4566"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "aws", "--endpoint-url=http://localhost:4566", "s3", "ls"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  backend:
+    name: backend
+    external: true
+    driver: bridge
